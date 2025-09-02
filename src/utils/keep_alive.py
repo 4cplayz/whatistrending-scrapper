@@ -1,62 +1,18 @@
 """
 Flask keep-alive service for Railway deployment.
 
-This keeps the Railway service active by providing an HTTP endpoint
-that Railway can ping to ensure the service stays running.
+Single responsibility: Start Flask server in background thread.
 """
 
-from flask import Flask
 from threading import Thread
-import time
 import logging
-
-app = Flask(__name__)
+from src.utils.flask_app import create_app
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-@app.route('/')
-def index():
-    """
-    Health check endpoint for Railway.
-    
-    Returns:
-        str: Simple alive message
-    """
-    return "Newsletter Service is Alive! 🚀"
-
-
-@app.route('/health')
-def health_check():
-    """
-    Health check endpoint for monitoring.
-    
-    Returns:
-        dict: Health status information
-    """
-    return {
-        "status": "healthy",
-        "service": "newsletter-scraper",
-        "timestamp": time.time()
-    }
-
-
-@app.route('/status')
-def status():
-    """
-    Status endpoint showing service information.
-    
-    Returns:
-        dict: Service status and information
-    """
-    return {
-        "service": "Newsletter Scraper Service",
-        "version": "1.0.0",
-        "status": "running",
-        "endpoints": ["/", "/health", "/status"]
-    }
+app = create_app()
 
 
 def run_flask():

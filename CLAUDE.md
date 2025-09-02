@@ -38,11 +38,20 @@ project_root/
 ├── logs/                   # Application logs
 └── requirements/           # Dependencies
 
-### 2. FILE SIZE & FUNCTION RULES
-- **Maximum 200 lines per file** - Split longer files immediately
-- **Maximum 30 lines per function** - Break complex functions into smaller ones
-- **One class per file** unless tightly coupled
-- **File naming:** snake_case, descriptive (e.g., `supabase_client.py`, `apify_scraper.py`)
+### 2. CRITICAL FILE SIZE & FUNCTION RULES - NEVER VIOLATE THESE
+- **ABSOLUTE MAXIMUM 200 lines per file** - Split longer files IMMEDIATELY
+- **ABSOLUTE MAXIMUM 30 lines per function** - Break complex functions into smaller ones
+- **ONE FUNCTION PER FILE when possible** - Create separate files for distinct functionality
+- **ONE CLASS PER FILE** unless tightly coupled
+- **SMALL, FOCUSED MODULES** - Each file should have a single responsibility
+- **File naming:** snake_case, descriptive (e.g., `health_check.py`, `scraper_status.py`, `newsletter_list.py`)
+
+**RULE ENFORCEMENT:**
+- If you write a file with multiple functions, STOP and split it into separate files
+- If a function exceeds 30 lines, STOP and break it down
+- Each API endpoint should be its own file in the appropriate directory
+- Each utility function should be its own file
+- NO EXCEPTIONS TO THESE RULES
 
 ### 3. MANDATORY CODE DOCUMENTATION
 Every function MUST include:
@@ -118,6 +127,71 @@ Railway-compatible Procfile
 Health check endpoints
 Graceful shutdown handling
 Environment-specific configurations
+
+## PRODUCTION-READY DEVELOPMENT PRACTICES
+
+### RAILWAY DEPLOYMENT REQUIREMENTS
+**Keep-Alive Architecture:**
+- Flask server on port 8080 for Railway health checks
+- Background worker threads for scheduled tasks
+- Graceful shutdown handling with signal management
+- Structured logging for Railway log monitoring
+
+**Environment Management:**
+- All secrets in Railway environment variables (never commit .env files)
+- Use .env.example as documentation template
+- Separate development/production configurations
+- Railway auto-detects Python via requirements.txt
+
+**Service Structure:**
+```
+main.py                    # Entry point combining Flask + workers
+src/utils/keep_alive.py    # Flask server for Railway hosting
+src/schedulers/            # Background task workers
+requirements.txt           # Dependencies for Railway auto-install
+.gitignore                 # Excludes secrets, venv, __pycache__
+```
+
+### CONTINUOUS DEPLOYMENT PRACTICES
+**Before Every Commit:**
+1. Test locally with `python main.py` - ensure Flask + workers start
+2. Verify all endpoints respond (`/`, `/health`, `/status`)
+3. Check background tasks execute correctly
+4. Review logs for errors or warnings
+5. Test graceful shutdown (Ctrl+C)
+
+**Code Quality Checks:**
+- Every function has docstrings with Args/Returns/Raises
+- Files under 200 lines, functions under 30 lines
+- Imports organized: standard → third-party → local
+- No hardcoded secrets (use environment variables)
+- Try-catch blocks around external API calls
+
+**Railway-Specific Testing:**
+- Service stays alive for 24/7 operation
+- Health checks return proper JSON responses  
+- Background workers run independently of web server
+- Logging outputs to stdout for Railway log capture
+- Memory usage stays reasonable for long-running processes
+
+### PRODUCTION MONITORING
+**Health Monitoring:**
+- `/health` endpoint returns service status + timestamp
+- `/status` endpoint shows version and available endpoints
+- Structured logging with INFO/ERROR levels
+- Worker status reporting in logs
+
+**Error Handling:**
+- Custom exceptions in src/utils/exceptions.py
+- Comprehensive error logging for debugging
+- Retry logic for external API failures
+- Database connection error recovery
+
+**Performance Considerations:**
+- Async/await for I/O operations (Supabase, APIs)
+- Connection pooling for database operations
+- Rate limiting for external API calls
+- Memory-efficient data processing for large datasets
 
 
 INSTRUCTIONS FOR USE:
