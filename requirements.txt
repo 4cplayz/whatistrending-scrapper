@@ -15,7 +15,7 @@ colorlog==6.8.2
 # (commented out for initial test deployment)
 
 # Database
-# supabase==2.3.4
+supabase==2.3.4
 # psycopg2-binary==2.9.9
 
 # Web scraping

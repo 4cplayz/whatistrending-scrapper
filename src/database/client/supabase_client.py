@@ -30,6 +30,7 @@ def get_supabase_client() -> Optional[Client]:
         if not url or not key:
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set")
         
+        # Create client without additional options that might cause issues
         supabase = create_client(url, key)
         logger.info("Supabase client initialized successfully")
         return supabase
