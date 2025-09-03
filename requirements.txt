@@ -24,7 +24,7 @@ beautifulsoup4==4.12.2
 apify-client==1.7.1
 
 # Video analysis
-# twelve-labs-python-sdk==1.0.0
+twelvelabs==0.2.3
 
 # Data processing
 # pandas==2.1.4

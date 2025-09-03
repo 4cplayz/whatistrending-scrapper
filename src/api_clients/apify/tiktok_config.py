@@ -51,7 +51,7 @@ def get_car_edit_config() -> Dict[str, Any]:
         "shouldDownloadMusicCovers": True,
         "shouldDownloadSlideshowImages": False,
         "shouldDownloadSubtitles": True,
-        "shouldDownloadVideos": False
+        "shouldDownloadVideos": True
     }
 
 

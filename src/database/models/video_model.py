@@ -62,7 +62,7 @@ class VideoModel:
     quality_score: Optional[float] = None
     
     # Analysis data (for Twelve Labs integration)
-    analysis_status: str = "pending"  # pending, processing, completed, failed
+    analysis_status: str = "completed"  # pending, processing, completed, failed  
     analysis_results: Optional[Dict[str, Any]] = None
     
     def to_dict(self) -> Dict[str, Any]:
@@ -76,7 +76,7 @@ class VideoModel:
             "video_id": self.video_id,
             "video_url": self.video_url,
             "description": self.description,
-            "hashtags": json.dumps(self.hashtags) if self.hashtags else "[]",
+            "hashtags": self.hashtags if self.hashtags else [],
             "author_username": self.author_username,
             "author_nickname": self.author_nickname,
             "author_verified": self.author_verified,
@@ -99,7 +99,7 @@ class VideoModel:
             "scrape_source": self.scrape_source,
             "quality_score": self.quality_score,
             "analysis_status": self.analysis_status,
-            "analysis_results": json.dumps(self.analysis_results) if self.analysis_results else None
+            "analysis_results": self.analysis_results
         }
     
     @classmethod
@@ -129,7 +129,7 @@ class VideoModel:
         
         return cls(
             video_id=apify_video.get("id", ""),
-            video_url=apify_video.get("webVideoUrl", ""),
+            video_url=apify_video.get("webVideoUrl", ""),  # Keep TikTok page URL for database
             description=apify_video.get("text", ""),
             hashtags=apify_video.get("hashtags", []),
             author_username=author_meta.get("name", ""),
@@ -154,3 +154,13 @@ class VideoModel:
             scrape_source=apify_video.get("input", "unknown"),
             analysis_status="completed"  # Filtered videos are ready for newsletter
         )
+    
+    def update_analysis_results(self, analysis_data: Dict[str, Any]) -> None:
+        """
+        Update video model with Twelve Labs analysis results.
+        
+        Args:
+            analysis_data (Dict[str, Any]): Analysis results from Twelve Labs
+        """
+        self.analysis_results = analysis_data
+        self.analysis_status = "completed"
