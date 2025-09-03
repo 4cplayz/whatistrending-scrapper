@@ -194,6 +194,44 @@ class TwelveLabsClient:
         except Exception as e:
             logger.error(f"Failed to summarize video {video_id}: {e}")
             raise
+    
+    def analyze(self, video_id: str, prompt: str) -> Dict[str, Any]:
+        """
+        Analyze a video with custom prompt.
+
+        Args:
+            video_id (str): The ID of the video to analyze.
+            prompt (str): Custom prompt for analysis.
+
+        Returns:
+            Dict[str, Any]: The analysis result.
+        """
+        try:
+            result = self.client.analyze(video_id=video_id, prompt=prompt)
+            logger.info(f"Analyzed video {video_id} with custom prompt")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to analyze video {video_id}: {e}")
+            raise
+    
+    def gist(self, video_id: str, types: list) -> Dict[str, Any]:
+        """
+        Get gist (title, topics, hashtags) for a video.
+
+        Args:
+            video_id (str): The ID of the video.
+            types (list): List of gist types to retrieve.
+
+        Returns:
+            Dict[str, Any]: The gist result.
+        """
+        try:
+            result = self.client.gist(video_id=video_id, types=types)
+            logger.info(f"Got gist for video {video_id} with types {types}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to get gist for video {video_id}: {e}")
+            raise
 
     def delete_task(self, task_id: str) -> bool:
         """

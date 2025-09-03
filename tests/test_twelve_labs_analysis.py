@@ -54,12 +54,12 @@ def test_real_analysis_pipeline():
         # Step 1: Run small Apify scrape (limited results)
         logger.info("=== STEP 1: Running Small Apify Scrape ===")
         
-        # COMPLETE OVERRIDE - explicitly clear ALL sources from base config
+        # Target specific car edit creator for quality content
         scrape_config = {
-            # Clear all base config sources
-            "hashtags": ["caredit"],               # Only 1 hashtag  
-            "profiles": [],                        # OVERRIDE: empty profiles array
-            "searchQueries": [],                   # OVERRIDE: empty search queries
+            # Focus on known car edit creator
+            "hashtags": [],                        # Clear hashtags - using profile instead
+            "profiles": ["@jynxx.kxy"],           # Target specific car edit creator
+            "searchQueries": [],                   # Clear search queries - using profile instead
             "resultsPerPage": 1,                   # Only 1 video per source
             "maxProfilesPerQuery": 1,              # Minimum required by API
             
@@ -80,7 +80,7 @@ def test_real_analysis_pipeline():
             "shouldDownloadVideos": True           # CRITICAL: Need actual video file URLs for Twelve Labs
         }
         
-        logger.info("🚀 Starting Apify scraper with limited config...")
+        logger.info("🚀 Starting Apify scraper targeting @jynxx.kxy (car edit creator)...")
         run_id = run_tiktok_scraper(custom_config=scrape_config)
         logger.info(f"📋 Scraper run ID: {run_id}")
         
