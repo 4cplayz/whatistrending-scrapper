@@ -20,7 +20,7 @@ def get_car_edit_config() -> Dict[str, Any]:
             "caredit",
             "caredits"
         ],
-        "maxProfilesPerQuery": 5,
+        "maxProfilesPerQuery": 1,
         "oldestPostDateUnified": "7 days",
         "profileScrapeSections": [
             "videos"
@@ -39,7 +39,7 @@ def get_car_edit_config() -> Dict[str, Any]:
             "@saicodime"
         ],
         "proxyCountryCode": "None",
-        "resultsPerPage": 5,
+        "resultsPerPage": 1,
         "scrapeRelatedVideos": False,
         "searchQueries": [
             "car edit",
