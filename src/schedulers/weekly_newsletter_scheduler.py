@@ -152,11 +152,11 @@ def force_run_newsletter() -> bool:
             # For testing, we'll allow override with explicit warning
             logger.info("🔓 Proceeding with manual override for testing")
         
-        # Import and run the newsletter pipeline
-        from src.schedulers.newsletter_pipeline import run_newsletter_generation
+        # Import and run the complete pipeline (video ingestion + newsletter)
+        from src.schedulers.main_pipeline import run_complete_weekly_pipeline
         
-        logger.info("🚀 Starting newsletter generation pipeline...")
-        success = run_newsletter_generation()
+        logger.info("🚀 Starting complete weekly pipeline (ingestion + newsletter)...")
+        success = run_complete_weekly_pipeline()
         
         if success:
             last_successful_run = datetime.utcnow()
@@ -176,27 +176,26 @@ def force_run_newsletter() -> bool:
 
 def _scheduled_newsletter_job():
     """
-    Production-safe scheduled newsletter generation.
-    Only runs when all conditions are met.
+    PRODUCTION VERSION - Full safety checks enabled.
     """
     global last_successful_run
     
     try:
         logger.info("📅 Sunday midnight scheduler triggered")
         
-        # Production safety checks
+        # Production safety: Check if we should actually generate
         should_generate, reason = _should_generate_newsletter()
         
         if not should_generate:
-            logger.info(f"⏭️ Skipping generation: {reason}")
+            logger.info(f"🚫 Newsletter generation skipped: {reason}")
             return
         
-        logger.info(f"✅ Generation approved: {reason}")
-        logger.info("🚀 Starting scheduled newsletter generation...")
+        logger.info(f"✅ Safety check passed: {reason}")
+        logger.info("🚀 Starting scheduled complete pipeline (ingestion + newsletter)...")
         
-        from src.schedulers.newsletter_pipeline import run_newsletter_generation
+        from src.schedulers.main_pipeline import run_complete_weekly_pipeline
         
-        success = run_newsletter_generation()
+        success = run_complete_weekly_pipeline()
         
         if success:
             last_successful_run = datetime.utcnow()
@@ -214,20 +213,24 @@ def _scheduler_worker():
     """Railway-optimized scheduler worker - minimal resource usage."""
     global scheduler_running
     
-    logger.info("📅 Railway-optimized scheduler started (low resource mode)")
+    logger.info("📅 Railway-optimized scheduler started (production mode)")
     
     while scheduler_running:
         try:
-            # Railway optimization: Only check if we're close to Sunday midnight
+            # Railway optimization: Only check frequently during Sunday midnight window
             now = datetime.utcnow()
             
-            # Only active on Sundays between 23:55-00:05 UTC (10-minute window)
-            if now.weekday() == 6 and (now.hour == 23 and now.minute >= 55) or (now.hour == 0 and now.minute <= 5):
+            # Check if we're in active window: Sunday 23:30 - Monday 01:00 UTC
+            is_sunday_night = (now.weekday() == 6 and now.hour >= 23) or (now.weekday() == 0 and now.hour < 1)
+            
+            if is_sunday_night:
                 logger.info("🎯 Sunday midnight window - Active scheduler checking")
                 schedule.run_pending()
                 time.sleep(30)  # Check every 30 seconds during active window
             else:
                 # Railway optimization: Sleep longer when not needed (reduces CPU/memory)
+                next_check = (now.replace(second=0, microsecond=0) + timedelta(minutes=5)).strftime('%H:%M:%S UTC')
+                logger.info(f"💤 Inactive period: sleeping 5 minutes (next check: {next_check})")
                 time.sleep(300)  # Check every 5 minutes when inactive
                 
         except Exception as e:

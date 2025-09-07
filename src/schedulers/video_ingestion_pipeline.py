@@ -93,10 +93,11 @@ def run_video_ingestion_pipeline(max_videos: int = 50):
         
         # STEP 3: Video Processing and Filtering
         logger.info("\n🔍 Step 3: Video Processing and Filtering")
+        from src.config.settings import NewsletterConfig
         config = {
-            'min_views': 1000,
-            'min_engagement': 0.001,
-            'max_duplicates': 0.8,
+            'min_views': NewsletterConfig.MIN_VIEWS_THRESHOLD,  # 100 instead of 1000
+            'min_engagement_rate': NewsletterConfig.MIN_ENGAGEMENT_RATE,  # 0.5% instead of 0.1%
+            'max_duplicates': 0.8,  # Keep duplicate threshold - important!
             'require_car_content': True,
             'max_videos': max_videos
         }

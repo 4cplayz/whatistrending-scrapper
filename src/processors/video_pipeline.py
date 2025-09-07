@@ -9,6 +9,7 @@ from typing import List, Dict, Any
 from src.processors.video_validator import validate_video_data
 from src.processors.duplicate_filter import remove_duplicates, detect_similar_content
 from src.processors.performance_filter import filter_by_performance, get_top_performers
+from src.config.settings import NewsletterConfig
 
 logger = logging.getLogger(__name__)
 
@@ -65,15 +66,15 @@ def process_scraped_videos(raw_videos: List[Dict[str, Any]],
     original_count = len(diverse_videos)
     high_performance = filter_by_performance(
         diverse_videos,
-        min_views=config.get("min_views", 1000),
-        min_engagement_rate=config.get("min_engagement_rate", 0.02)
+        min_views=config.get("min_views", NewsletterConfig.MIN_VIEWS_THRESHOLD),
+        min_engagement_rate=config.get("min_engagement_rate", NewsletterConfig.MIN_ENGAGEMENT_RATE)
     )
     stats["performance_filtered"] = original_count - len(high_performance)
     
     # Step 5: Get top performers
     top_videos = get_top_performers(
         high_performance,
-        top_n=config.get("max_videos", 50)
+        top_n=config.get("max_videos", NewsletterConfig.TOP_PERFORMERS_LIMIT)
     )
     
     stats["final_count"] = len(top_videos)
@@ -89,15 +90,15 @@ def process_scraped_videos(raw_videos: List[Dict[str, Any]],
 
 def get_default_config() -> Dict[str, Any]:
     """
-    Get default processing configuration.
+    Get cost-optimized processing configuration.
     
     Returns:
-        Dict[str, Any]: Default configuration settings
+        Dict[str, Any]: Default configuration settings (cost-optimized)
     """
     return {
-        "min_views": 1000,           # Minimum view count
-        "min_engagement_rate": 0.02, # Minimum 2% engagement rate
-        "max_videos": 50,            # Maximum videos to keep
+        "min_views": NewsletterConfig.MIN_VIEWS_THRESHOLD,           # Much lower - 100 views instead of 1000
+        "min_engagement_rate": NewsletterConfig.MIN_ENGAGEMENT_RATE, # Much lower - 0.5% instead of 2%
+        "max_videos": NewsletterConfig.TOP_PERFORMERS_LIMIT,         # Keep more videos - 35 instead of 50
         "enable_similarity_check": True,
         "enable_performance_filter": True
     }

@@ -23,6 +23,11 @@ class NewsletterConfig:
     HASHTAG_COMBINATIONS_LIMIT = int(os.getenv('HASHTAG_COMBINATIONS_LIMIT', 10))
     CREATOR_ANALYSIS_LIMIT = int(os.getenv('CREATOR_ANALYSIS_LIMIT', 5))
     CHAMPION_SELECTION_LIMIT = int(os.getenv('CHAMPION_SELECTION_LIMIT', 2))
+    
+    # Cost-optimized filtering settings (reduce waste from aggressive filtering)
+    MIN_VIEWS_THRESHOLD = int(os.getenv('MIN_VIEWS_THRESHOLD', 100))  # Much lower threshold
+    MIN_ENGAGEMENT_RATE = float(os.getenv('MIN_ENGAGEMENT_RATE', 0.005))  # 0.5% instead of 2%
+    TOP_PERFORMERS_LIMIT = int(os.getenv('TOP_PERFORMERS_LIMIT', 35))  # Keep more videos
 
 
 def get_config():
