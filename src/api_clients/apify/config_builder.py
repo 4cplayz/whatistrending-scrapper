@@ -6,7 +6,7 @@ Single responsibility: Build and modify TikTok scraping configurations.
 
 import logging
 from typing import Dict, List, Any, Optional
-from src.api_clients.apify.tiktok_config import get_car_edit_config
+from src.config.tiktok_config import get_car_edit_config
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from src.database.client.supabase_client import get_supabase_client
 from src.database.models.video_model import VideoModel
+from src.config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -144,12 +145,12 @@ def check_video_exists(video_id: str) -> bool:
         return False
 
 
-def get_videos_for_analysis(limit: int = 50) -> List[Dict[str, Any]]:
+def get_videos_for_analysis(limit: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Get videos that are pending analysis.
     
     Args:
-        limit (int): Maximum number of videos to return
+        limit (Optional[int]): Maximum number of videos to return (defaults to config)
         
     Returns:
         List[Dict[str, Any]]: Videos pending analysis
@@ -162,7 +163,7 @@ def get_videos_for_analysis(limit: int = 50) -> List[Dict[str, Any]]:
             .select("*")
             .eq("analysis_status", "pending")
             .order("engagement_score", desc=True)
-            .limit(limit)
+            .limit(limit or get_config().VIDEO_ANALYSIS_DEFAULT_LIMIT)
             .execute()
         )
         

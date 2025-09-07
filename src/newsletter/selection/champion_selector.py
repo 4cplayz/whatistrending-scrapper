@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
 import logging
+from src.config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +284,7 @@ def _find_recommendation_examples(df: pd.DataFrame, recommendations: Dict[str, A
     
     # Look for examples supporting new creator recommendations
     new_creators = recommendations.get('new_creators', [])
-    for rec in new_creators[:2]:  # Top 2 recommendations
+    for rec in new_creators[:get_config().CHAMPION_SELECTION_LIMIT]:  # Configurable recommendations
         if isinstance(rec, dict):
             # Find video matching this recommendation
             example_video = _find_matching_video(df, rec.get('recommendation', ''))
@@ -304,7 +305,7 @@ def _find_gap_opportunity_examples(df: pd.DataFrame, gap_analysis: Dict[str, Any
     
     # Look for underexplored combinations
     underexplored = gap_analysis.get('underexplored_combinations', [])
-    for gap in underexplored[:2]:
+    for gap in underexplored[:get_config().CHAMPION_SELECTION_LIMIT]:
         if isinstance(gap, dict):
             example_video = _find_matching_video(df, gap.get('combination', ''))
             if example_video:
@@ -323,7 +324,7 @@ def _find_trend_prediction_examples(df: pd.DataFrame, predictions: Dict[str, Any
     examples = []
     
     content_predictions = predictions.get('content_trend_predictions', [])
-    for prediction in content_predictions[:2]:
+    for prediction in content_predictions[:get_config().CHAMPION_SELECTION_LIMIT]:
         if isinstance(prediction, dict):
             example_video = _find_matching_video(df, prediction.get('trend', ''))
             if example_video:

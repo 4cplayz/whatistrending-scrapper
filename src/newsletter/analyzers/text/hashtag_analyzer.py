@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, List
 import logging
+from src.config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +226,7 @@ def analyze_hashtag_combinations(df: pd.DataFrame, min_combination_count: int = 
             combination_analysis.items(), 
             key=lambda x: x[1]['avg_views'], 
             reverse=True
-        )[:10]
+        )[:get_config().HASHTAG_COMBINATIONS_LIMIT]
         combination_analysis['top_combinations'] = [
             {'combination': combo, 'avg_views': data['avg_views']} 
             for combo, data in top_combinations

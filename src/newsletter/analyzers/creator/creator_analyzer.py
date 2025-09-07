@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 import logging
+from src.config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -168,12 +169,12 @@ def analyze_creator_content_preferences(df: pd.DataFrame) -> Dict[str, Any]:
         # Analyze car brand preferences
         if 'car_brand' in tier_data.columns:
             brand_counts = tier_data['car_brand'].value_counts()
-            preferences_analysis[tier]['top_car_brands'] = brand_counts.head(5).to_dict()
+            preferences_analysis[tier]['top_car_brands'] = brand_counts.head(get_config().CREATOR_ANALYSIS_LIMIT).to_dict()
         
         # Analyze hook preferences
         if 'hook_type' in tier_data.columns:
             hook_counts = tier_data['hook_type'].value_counts()
-            preferences_analysis[tier]['top_hooks'] = hook_counts.head(5).to_dict()
+            preferences_analysis[tier]['top_hooks'] = hook_counts.head(get_config().CREATOR_ANALYSIS_LIMIT).to_dict()
         
         # Analyze video duration preferences
         if 'duration' in tier_data.columns:

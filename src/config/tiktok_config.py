@@ -18,33 +18,32 @@ def get_car_edit_config() -> Dict[str, Any]:
         "excludePinnedPosts": True,
         "hashtags": [
             "caredit",
-            "caredits"
+            "caredits",
+            "supercaredits",
+            "hypercaredits"
         ],
-        "maxProfilesPerQuery": 1,
+        "maxProfilesPerQuery": 3,
         "oldestPostDateUnified": "7 days",
         "profileScrapeSections": [
             "videos"
         ],
-        "profileSorting": "latest",
+        "profileSorting": "popular",
         "profiles": [
-            "@vqrxzv",
-            "@kazumi.zxc", 
-            "@psyho71",
-            "@prv5t1",
-            "@mitovfx",
-            "@benyx.yz",
-            "@blen.yzf",
-            "@iswearty.yz",
             "@jynxx.kxy",
-            "@saicodime"
+            "@vqrxzv",
+            "@psyho71",
+            "@benyx.yz",
+            "@kazumi.zxc"
         ],
         "proxyCountryCode": "None",
-        "resultsPerPage": 1,
+        "resultsPerPage": 4,
         "scrapeRelatedVideos": False,
         "searchQueries": [
             "car edit",
             "car edits", 
-            "car edit sounds"
+            "supercar edits phonk",
+            "120 fps caredit",
+            "car edits funk"
         ],
         "shouldDownloadAvatars": False,
         "shouldDownloadCovers": True,

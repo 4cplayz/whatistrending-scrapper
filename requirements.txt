@@ -1,35 +1,34 @@
-# Web framework for keep-alive service
+# Production Dependencies for Railway Deployment
+
+# Web framework
 Flask==3.0.0
 Werkzeug==3.0.1
 
-# HTTP client for API calls (future use)
-requests==2.31.0
-
-# Environment variable management
-python-dotenv==1.0.0
-
-# Logging and utilities
-colorlog==6.8.2
-
-# Future dependencies for newsletter service
-# (commented out for initial test deployment)
-
 # Database
 supabase==2.3.4
-# psycopg2-binary==2.9.9
 
-# Web scraping
-beautifulsoup4==4.12.2
-# selenium==4.16.0
+# API clients
 apify-client==1.7.1
+requests==2.31.0
 
 # Video analysis
 twelvelabs==0.2.3
 
-# Data processing
-# pandas==2.1.4
-# numpy==1.26.2
+# Data processing (required by newsletter pipeline)
+pandas==2.1.4
+numpy==1.26.2
 
-# Async support
-# aiohttp==3.9.1
-# asyncio-throttle==1.0.2
+# Statistics (required by newsletter analytics)
+scipy==1.11.4
+
+# Environment management
+python-dotenv==1.0.0
+
+# Scheduling (required by newsletter scheduler)
+schedule==1.2.0
+
+# Web scraping utilities
+beautifulsoup4==4.12.2
+
+# Date handling
+python-dateutil==2.8.2

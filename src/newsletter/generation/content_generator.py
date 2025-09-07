@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime, timedelta
 import json
+from src.config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,11 @@ def _generate_top_rankings_table_data(all_analysis_results: Dict[str, Any]) -> L
         'hashtag_analysis': 'hashtags',
         'effects_analysis': 'effects',
         'brand_analysis': 'car_brands',
-        'music_analysis': 'music_tracks'
+        'music_analysis': 'music_tracks',
+        'hook_analysis': 'hooks',
+        'transition_analysis': 'transitions',
+        'car_type_analysis': 'car_types',
+        'creator_analysis': 'creators'
     }
     
     for analysis_key, category_name in ranking_categories.items():
@@ -209,7 +214,7 @@ def _generate_top_rankings_table_data(all_analysis_results: Dict[str, Any]) -> L
                 analysis_data.items(), 
                 key=lambda x: x[1].get('avg_views', 0) if isinstance(x[1], dict) else 0, 
                 reverse=True
-            )[:5]  # Top 5
+            )[:get_config().TOP_RANKINGS_LIMIT]
             
             for rank, (element_name, data) in enumerate(sorted_items, 1):
                 if isinstance(data, dict):
@@ -217,9 +222,9 @@ def _generate_top_rankings_table_data(all_analysis_results: Dict[str, Any]) -> L
                         'category': category_name,
                         'rank_position': rank,
                         'element_name': element_name,
-                        'usage_count': int(data.get('video_count', 0)),
+                        'usage_count': int(data.get('usage_count', data.get('video_count', 0))),  # Try both field names
                         'avg_views': int(data.get('avg_views', 0)),
-                        'avg_engagement': float(data.get('avg_engagement_rate', 0.0)) * 100
+                        'avg_engagement': float(data.get('avg_engagement', 0.0)) * 100  # Fix field name
                     }
                     rankings_data.append(ranking_entry)
     
@@ -243,7 +248,7 @@ def _generate_recommendations_table_data(all_analysis_results: Dict[str, Any]) -
     creator_recs = gpt_insights.get('creator_recommendations', {})
     for audience_type, recs in creator_recs.items():
         if isinstance(recs, list):
-            for rec in recs[:3]:  # Top 3 per audience
+            for rec in recs[:get_config().RECOMMENDATIONS_LIMIT]:  # Configurable per audience
                 if isinstance(rec, dict):
                     recommendation_entry = {
                         'recommendation_type': 'creator_strategy',
@@ -258,7 +263,7 @@ def _generate_recommendations_table_data(all_analysis_results: Dict[str, Any]) -
     # Process content gap opportunities
     gap_analysis = gpt_insights.get('content_gap_analysis', {})
     underexplored = gap_analysis.get('underexplored_combinations', [])
-    for gap in underexplored[:3]:  # Top 3 gaps
+    for gap in underexplored[:get_config().RECOMMENDATIONS_LIMIT]:  # Configurable gaps
         if isinstance(gap, dict):
             recommendation_entry = {
                 'recommendation_type': 'content_gap',
@@ -273,7 +278,7 @@ def _generate_recommendations_table_data(all_analysis_results: Dict[str, Any]) -
     # Process trend predictions
     trend_predictions = gpt_insights.get('trend_predictions', {})
     content_predictions = trend_predictions.get('content_trend_predictions', [])
-    for prediction in content_predictions[:3]:  # Top 3 predictions
+    for prediction in content_predictions[:get_config().RECOMMENDATIONS_LIMIT]:  # Configurable predictions
         if isinstance(prediction, dict):
             recommendation_entry = {
                 'recommendation_type': 'trend_prediction',
@@ -303,21 +308,21 @@ def _generate_statistical_findings_table_data(all_analysis_results: Dict[str, An
     
     # Process significant differences (main statistical findings)
     significant_differences = stats.get('significant_differences', [])
-    for diff in significant_differences[:5]:  # Top 5 findings
+    for diff in significant_differences[:get_config().STATISTICAL_FINDINGS_LIMIT]:  # Configurable findings
         if isinstance(diff, dict):
             finding_entry = {
                 'finding_type': diff.get('finding_type', 'performance_difference'),
-                'variable_tested': diff.get('element', diff.get('category', 'Unknown')),
+                'variable_tested': diff.get('element_type', diff.get('top_performer', 'Unknown')),  # Fix field names
                 'p_value': float(diff.get('p_value', 1.0)),
-                'effect_size': float(diff.get('effect_size', diff.get('value', 0.0))),
-                'effect_magnitude': diff.get('significance', 'Unknown'),
-                'finding_description': diff.get('sample_note', f"Performance finding for {diff.get('element', 'Unknown')}")
+                'effect_size': float(diff.get('effect_size', 0.0)),  # Fix field name
+                'effect_magnitude': diff.get('effect_magnitude', 'Unknown'),  # Fix field name 
+                'finding_description': diff.get('sample_note', f"Performance finding for {diff.get('element_type', 'Unknown')}")  # Fix field name
             }
             findings_data.append(finding_entry)
     
     # Process significance tests
     sig_tests = stats.get('significance_results', {}).get('significant_tests', [])
-    for test in sig_tests[:5]:  # Top 5 significant tests
+    for test in sig_tests[:get_config().STATISTICAL_FINDINGS_LIMIT]:  # Configurable significant tests
         if isinstance(test, dict):
             finding_entry = {
                 'finding_type': 'significance_test',
@@ -344,7 +349,7 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
             top_performers['car_brand'] = {
                 'name': top_brand[0],
                 'views': top_brand[1].get('avg_views', 0),
-                'engagement': top_brand[1].get('avg_engagement_rate', 0.0),
+                'engagement': top_brand[1].get('avg_engagement', 0.0),  # Fix field name
                 'usage_count': top_brand[1].get('video_count', 0)
             }
     
@@ -356,7 +361,7 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
             top_performers['hook'] = {
                 'name': top_hook[0],
                 'views': top_hook[1].get('avg_views', 0),
-                'engagement': top_hook[1].get('avg_engagement_rate', 0.0),
+                'engagement': top_hook[1].get('avg_engagement', 0.0),  # Fix field name
                 'usage_count': top_hook[1].get('video_count', 0)
             }
     
@@ -368,7 +373,7 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
             top_performers['transition'] = {
                 'name': top_transition[0],
                 'views': top_transition[1].get('avg_views', 0),
-                'engagement': top_transition[1].get('avg_engagement_rate', 0.0),
+                'engagement': top_transition[1].get('avg_engagement', 0.0),  # Fix field name
                 'usage_count': top_transition[1].get('video_count', 0)
             }
     
@@ -380,7 +385,7 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
             top_performers['effect'] = {
                 'name': top_effect[0],
                 'views': top_effect[1].get('avg_views', 0),
-                'engagement': top_effect[1].get('avg_engagement_rate', 0.0),
+                'engagement': top_effect[1].get('avg_engagement', 0.0),  # Fix field name
                 'usage_count': top_effect[1].get('video_count', 0)
             }
     
@@ -392,7 +397,7 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
             top_performers['music_track'] = {
                 'name': top_music[0],
                 'views': top_music[1].get('avg_views', 0),
-                'engagement': top_music[1].get('avg_engagement_rate', 0.0),
+                'engagement': top_music[1].get('avg_engagement', 0.0),  # Fix field name
                 'url': f"https://tiktok.com/music/{top_music[0].replace(' ', '-')}"
             }
     
@@ -403,12 +408,12 @@ def _extract_top_performers_from_analysis(analyzer_results: Dict[str, Any]) -> D
         if len(top_hashtag) == 2 and isinstance(top_hashtag[1], dict):
             top_performers['hashtag'] = {
                 'name': top_hashtag[0],
-                'usage_count': top_hashtag[1].get('video_count', 0),
+                'usage_count': top_hashtag[1].get('usage_count', 0),  # Fix field name
                 'avg_views': top_hashtag[1].get('avg_views', 0)
             }
     
     # Add default values for missing categories
-    default_categories = ['car_type', 'music_genre', 'edit_style', 'creator_tier']
+    default_categories = ['car_type', 'music_genre', 'edit_style', 'creator_tier', 'hook', 'transition', 'effect']
     for category in default_categories:
         if category not in top_performers:
             top_performers[category] = {

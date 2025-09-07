@@ -8,7 +8,7 @@ import logging
 import time
 from typing import Dict, Any, Optional
 from src.api_clients.apify.apify_client import get_apify_client
-from src.api_clients.apify.tiktok_config import get_car_edit_config
+from src.config.tiktok_config import get_car_edit_config
 
 logger = logging.getLogger(__name__)
 
