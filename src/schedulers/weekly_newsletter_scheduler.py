@@ -176,23 +176,27 @@ def force_run_newsletter() -> bool:
         
         # Import and run the complete pipeline (video ingestion + newsletter)
         from src.schedulers.main_pipeline import run_complete_weekly_pipeline
-        
+        from src.utils.error_logger import log_newsletter_failure
+
         logger.info("🚀 Starting complete weekly pipeline (ingestion + newsletter)...")
         success = run_complete_weekly_pipeline()
-        
+
         if success:
             last_successful_run = datetime.now(timezone.utc)
             logger.info("✅ Manual newsletter generation completed successfully")
             return True
         else:
             logger.error("❌ Newsletter generation pipeline returned failure")
+            log_newsletter_failure("manual_pipeline", "Manual newsletter pipeline returned failure status")
             return False
-            
+
     except ImportError as e:
         logger.error(f"❌ Newsletter pipeline not found: {e}")
+        log_newsletter_failure("manual_import", f"Cannot import newsletter pipeline for manual run: {str(e)}")
         return False
     except Exception as e:
         logger.error(f"❌ Manual newsletter generation failed: {e}")
+        log_newsletter_failure("manual_exception", f"Unexpected error in manual generation: {str(e)}")
         return False
 
 
@@ -216,19 +220,23 @@ def _scheduled_newsletter_job():
         _log_utc("info", "🚀 Starting scheduled complete pipeline (ingestion + newsletter)...")
         
         from src.schedulers.main_pipeline import run_complete_weekly_pipeline
-        
+        from src.utils.error_logger import log_newsletter_failure
+
         success = run_complete_weekly_pipeline()
-        
+
         if success:
             last_successful_run = datetime.now(timezone.utc)
             logger.info("✅ Scheduled newsletter generation completed successfully")
         else:
             logger.error("❌ Scheduled newsletter generation failed")
-            
+            log_newsletter_failure("complete_pipeline", "Weekly newsletter pipeline returned failure status")
+
     except ImportError as e:
         logger.error(f"❌ Newsletter pipeline not available: {e}")
+        log_newsletter_failure("pipeline_import", f"Cannot import newsletter pipeline: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Scheduled newsletter job failed: {e}")
+        log_newsletter_failure("scheduler_exception", f"Unexpected error in scheduled job: {str(e)}")
 
 
 def _scheduler_worker():

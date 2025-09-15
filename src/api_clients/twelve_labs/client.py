@@ -8,6 +8,7 @@ import os
 import logging
 from typing import Optional, Dict, Any
 from twelvelabs import TwelveLabs
+from src.utils.error_logger import log_api_failure
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,9 @@ class TwelveLabsClient:
         self.api_key = api_key or os.environ.get("TWELVE_LABS_API_KEY")
         
         if not self.api_key:
-            raise ValueError("TWELVE_LABS_API_KEY must be set")
+            error_msg = "TWELVE_LABS_API_KEY must be set"
+            log_api_failure("twelve_labs_init", error_msg)
+            raise ValueError(error_msg)
         
         try:
             # Try new SDK initialization format first
@@ -47,6 +50,7 @@ class TwelveLabsClient:
                 logger.info("Twelve Labs client initialized with alternative method")
             except Exception as e2:
                 logger.error(f"Both initialization methods failed: {e}, {e2}")
+                log_api_failure("twelve_labs_client", f"All initialization methods failed: {str(e)}, {str(e2)}")
                 raise
     
     def create_index(self, index_name: str) -> Dict[str, Any]:
@@ -83,6 +87,7 @@ class TwelveLabsClient:
             
         except Exception as e:
             logger.error(f"Failed to create index: {e}")
+            log_api_failure("twelve_labs_index", f"Index creation failed: {str(e)}", {"index_name": index_name})
             raise
     
     def get_index_by_name(self, index_name: str) -> Optional[Dict[str, Any]]:
@@ -110,6 +115,7 @@ class TwelveLabsClient:
             
         except Exception as e:
             logger.error(f"Failed to list indexes: {e}")
+            log_api_failure("twelve_labs_list", f"Failed to list indexes: {str(e)}", {"index_name": index_name})
             return None
     
     def upload_video(self, index_id: str, video_url: str) -> Dict[str, Any]:
@@ -141,6 +147,7 @@ class TwelveLabsClient:
             
         except Exception as e:
             logger.error(f"Failed to upload video {video_url}: {e}")
+            log_api_failure("twelve_labs_upload", f"Video upload failed: {str(e)}", {"video_url": video_url, "index_id": index_id})
             raise
     
     def wait_for_task_completion(self, task_id: str) -> Dict[str, Any]:
@@ -250,6 +257,7 @@ class TwelveLabsClient:
             
         except Exception as e:
             logger.error(f"Failed to delete task {task_id}: {e}")
+            log_api_failure("twelve_labs_delete", f"Task deletion failed: {str(e)}", {"task_id": task_id})
             return False
     
     def delete_index(self, index_id: str) -> bool:

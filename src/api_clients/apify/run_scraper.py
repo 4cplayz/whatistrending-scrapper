@@ -9,6 +9,7 @@ import time
 from typing import Dict, Any, Optional
 from src.api_clients.apify.apify_client import get_apify_client
 from src.config.tiktok_config import get_car_edit_config
+from src.utils.error_logger import log_api_failure
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ def run_tiktok_scraper(actor_id: str = "clockworks/free-tiktok-scraper", custom_
         
     except Exception as e:
         logger.error(f"Failed to run TikTok scraper: {e}")
+        log_api_failure("apify_scraper", f"TikTok scraper execution failed: {str(e)}", {"actor_id": actor_id})
         raise ValueError(f"TikTok scraper execution failed: {e}")
 
 

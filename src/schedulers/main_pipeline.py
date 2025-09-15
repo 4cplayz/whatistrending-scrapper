@@ -10,6 +10,7 @@ This is the master pipeline that runs both:
 
 import logging
 from datetime import datetime
+from src.utils.error_logger import log_newsletter_failure
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +48,18 @@ def run_complete_weekly_pipeline() -> bool:
             
             if not ingestion_success:
                 logger.error("❌ Video ingestion pipeline failed")
+                log_newsletter_failure("video_ingestion", "Video ingestion pipeline returned failure status")
                 return False
                 
             logger.info("✅ Video ingestion pipeline completed successfully")
             
         except ImportError as e:
             logger.error(f"❌ Video ingestion pipeline not available: {e}")
+            log_newsletter_failure("ingestion_import", f"Cannot import video ingestion pipeline: {str(e)}")
             return False
         except Exception as e:
             logger.error(f"❌ Video ingestion pipeline error: {e}")
+            log_newsletter_failure("ingestion_exception", f"Unexpected error in video ingestion: {str(e)}")
             return False
         
         # ========================================
@@ -73,15 +77,18 @@ def run_complete_weekly_pipeline() -> bool:
             
             if not newsletter_success:
                 logger.error("❌ Newsletter generation pipeline failed")
+                log_newsletter_failure("newsletter_generation", "Newsletter generation pipeline returned failure status")
                 return False
                 
             logger.info("✅ Newsletter generation pipeline completed successfully")
             
         except ImportError as e:
             logger.error(f"❌ Newsletter generation pipeline not available: {e}")
+            log_newsletter_failure("newsletter_import", f"Cannot import newsletter generation pipeline: {str(e)}")
             return False
         except Exception as e:
             logger.error(f"❌ Newsletter generation pipeline error: {e}")
+            log_newsletter_failure("newsletter_exception", f"Unexpected error in newsletter generation: {str(e)}")
             return False
         
         # ========================================
