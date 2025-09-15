@@ -10,7 +10,7 @@ import sys
 import signal
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 from src.config.settings import get_config
@@ -210,7 +210,7 @@ if __name__ == '__main__':
     logger.info("=" * 60)
     
     # Store start time for uptime tracking
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     
     # Validate environment variables
     required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "APIFY_TOKEN", "TWELVE_LABS_API_KEY"]
