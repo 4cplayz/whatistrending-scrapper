@@ -33,6 +33,11 @@ def log_failed_action(
         None: Errors are caught and logged locally to prevent cascading failures
     """
     try:
+        # Avoid circular dependency - don't log database connection errors to database
+        if action_type == "database" and "client" in action_name.lower():
+            logger.error(f"🔄 Skipping database logging for client error: {error_message}")
+            return False
+
         from src.database.client.supabase_client import get_supabase_client
 
         client = get_supabase_client()
