@@ -140,13 +140,6 @@ config/secrets.py
 secrets.json
 credentials.json
 
-# Data files
-data/
-*.csv
-*.json
-*.xlsx
-*.xls
-
 # Video/Media files
 *.mp4
 *.avi
