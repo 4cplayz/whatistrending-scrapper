@@ -274,12 +274,193 @@ The service is optimized for Raspberry Pi with:
 - Monitor logs for any unauthorized access attempts
 - Keep your Pi system updated with `sudo apt update && sudo apt upgrade`
 
+## Code Updates & Deployment
+
+### Updating the Service with New Code
+
+When you've made changes to the code and want to deploy them to your Raspberry Pi:
+
+#### 1. Stop the Running Service
+```bash
+# SSH into your Raspberry Pi
+ssh pi@raspberrypi.local
+
+# Stop the service
+sudo systemctl stop tiktok-newsletter.service
+
+# Verify it's stopped
+sudo systemctl status tiktok-newsletter.service
+```
+
+#### 2. Pull Latest Changes
+```bash
+# Navigate to project directory
+cd ~/whatistrending-scrapper
+
+# Pull latest code from repository
+git pull origin main
+
+# Check what was updated
+git log --oneline -5
+```
+
+#### 3. Update Dependencies (if needed)
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Update Python packages if requirements.txt changed
+pip install -r requirements.txt --upgrade
+```
+
+#### 4. Update Database Schema (if needed)
+If new database tables were added (like the error logging table):
+- Go to your Supabase project dashboard
+- Navigate to **SQL Editor**
+- Run any new SQL files from `src/database/schema/`
+
+#### 5. Update Environment Variables (if needed)
+```bash
+# Check if new variables were added to .env.example
+diff .env .env.example
+
+# Edit your .env file if needed
+nano .env
+```
+
+#### 6. Test the Updates (Optional but Recommended)
+```bash
+# Test manually before starting service
+python3 main.py
+
+# Let it run for 30 seconds to verify no immediate errors
+# Stop with Ctrl+C when satisfied
+```
+
+#### 7. Start the Service
+```bash
+# Start the service with new code
+sudo systemctl start tiktok-newsletter.service
+
+# Verify it started successfully
+sudo systemctl status tiktok-newsletter.service
+
+# Watch logs for any startup issues
+sudo journalctl -u tiktok-newsletter.service -f
+```
+
+### Emergency Stop Commands
+
+#### Stop Service Immediately
+```bash
+sudo systemctl stop tiktok-newsletter.service
+```
+
+#### Kill Service if Unresponsive
+```bash
+# Find the process
+ps aux | grep python | grep main.py
+
+# Kill by process ID (replace XXXX with actual PID)
+sudo kill -9 XXXX
+
+# Or kill all Python processes (use carefully!)
+sudo pkill -f "python.*main.py"
+```
+
+#### Disable Service (Prevent Auto-Start)
+```bash
+# Disable so it won't start on boot
+sudo systemctl disable tiktok-newsletter.service
+
+# Stop current running instance
+sudo systemctl stop tiktok-newsletter.service
+```
+
+### Rollback to Previous Version
+
+If new code has issues:
+
+```bash
+# Stop current service
+sudo systemctl stop tiktok-newsletter.service
+
+# Check git history
+git log --oneline -10
+
+# Rollback to previous commit (replace XXXXXXX with commit hash)
+git checkout XXXXXXX
+
+# Restart service with old code
+sudo systemctl start tiktok-newsletter.service
+```
+
+### Configuration Changes
+
+#### Changing Newsletter Schedule
+Edit your `.env` file to change when newsletters generate:
+```bash
+nano .env
+
+# Modify these lines:
+NEWSLETTER_GENERATION_DAY=6    # 0=Monday, 6=Sunday
+NEWSLETTER_GENERATION_HOUR=0   # 0-23 UTC
+
+# Restart service to apply changes
+sudo systemctl restart tiktok-newsletter.service
+```
+
+#### View Current Configuration
+```bash
+# See current environment variables
+sudo systemctl show-environment tiktok-newsletter.service
+
+# View scheduler status with current config
+curl http://localhost:8080/scheduler/status
+```
+
+### Monitoring & Maintenance
+
+#### Check Service Health
+```bash
+# Quick status check
+sudo systemctl is-active tiktok-newsletter.service
+
+# Detailed status
+sudo systemctl status tiktok-newsletter.service
+
+# API health check
+curl http://localhost:8080/health
+```
+
+#### View Recent Logs
+```bash
+# Last 50 lines
+sudo journalctl -u tiktok-newsletter.service -n 50
+
+# Since today
+sudo journalctl -u tiktok-newsletter.service --since today
+
+# Real-time monitoring
+sudo journalctl -u tiktok-newsletter.service -f
+```
+
+#### Backup Important Files
+```bash
+# Backup your configuration
+cp .env .env.backup.$(date +%Y%m%d)
+
+# Backup service file
+sudo cp /etc/systemd/system/tiktok-newsletter.service /etc/systemd/system/tiktok-newsletter.service.backup
+```
+
 ## Success Indicators
 
-✅ Service shows "active (running)" status  
-✅ Health endpoint returns database connection info  
-✅ Logs show scheduler started successfully  
-✅ No error messages in recent logs  
-✅ Service survives Pi reboot  
+✅ Service shows "active (running)" status
+✅ Health endpoint returns database connection info
+✅ Logs show scheduler started successfully
+✅ No error messages in recent logs
+✅ Service survives Pi reboot
+✅ Updates deploy successfully without downtime
 
-Your TikTok Newsletter service is now running 24/7 on your Raspberry Pi!
+Your TikTok Newsletter service is now running 24/7 on your Raspberry Pi with full deployment capabilities!
