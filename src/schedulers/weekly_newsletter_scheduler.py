@@ -264,7 +264,7 @@ def _scheduler_worker():
                 # Normal case: 30 minutes before to end of grace period
                 start_hour = max(0, NEWSLETTER_HOUR - 1)
                 end_hour = min(23, NEWSLETTER_HOUR + 1)  # Grace period extends 1 hour after scheduled time
-                is_active_window = now.weekday() == NEWSLETTER_DAY and (start_hour <= now.hour <= end_hour)
+                is_active_window = now.weekday() == NEWSLETTER_DAY and (start_hour <= now.hour < end_hour)
             
             if is_active_window:
                 day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
