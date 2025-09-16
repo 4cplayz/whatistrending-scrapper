@@ -13,26 +13,34 @@ logger = logging.getLogger(__name__)
 
 def analyze_creator_tier_performance(df: pd.DataFrame) -> Dict[str, Any]:
     """
-    Analyze viral performance by creator follower tier.
-    
+    Analyze viral performance by creator engagement tier.
+
     Args:
         df (pd.DataFrame): Video data with creator features and viral metrics
-        
+
     Returns:
         Dict[str, Any]: Creator tier performance analysis
-        
+
     Raises:
         ValueError: If required columns are missing
     """
-    if 'follower_tier' not in df.columns:
-        logger.warning("follower_tier column missing - cannot analyze by tier")
+    # Create engagement tiers from existing data
+    if 'engagement_rate' not in df.columns:
+        logger.warning("engagement_rate column missing - cannot create engagement tiers")
         return {}
-    
+
+    # Create engagement-based tiers
+    df['engagement_tier'] = pd.cut(
+        df['engagement_rate'].fillna(0),
+        bins=[0, 0.05, 0.10, 0.15, 1.0],
+        labels=['Low_Engagement', 'Medium_Engagement', 'High_Engagement', 'Elite_Engagement']
+    )
+
     tier_performance = {}
     viral_threshold = df['views'].quantile(0.8)
-    
-    for tier in df['follower_tier'].dropna().unique():
-        tier_data = df[df['follower_tier'] == tier]
+
+    for tier in df['engagement_tier'].dropna().unique():
+        tier_data = df[df['engagement_tier'] == tier]
         if len(tier_data) == 0:
             continue
             
@@ -146,21 +154,28 @@ def analyze_individual_creator_performance(df: pd.DataFrame, min_videos: int = 2
 def analyze_creator_content_preferences(df: pd.DataFrame) -> Dict[str, Any]:
     """
     Analyze what content types each creator tier prefers.
-    
+
     Args:
         df (pd.DataFrame): Video data with creator and content features
-        
+
     Returns:
         Dict[str, Any]: Creator content preferences analysis
     """
     preferences_analysis = {}
-    
-    if 'follower_tier' not in df.columns:
-        logger.warning("follower_tier column missing")
-        return {}
-    
-    for tier in df['follower_tier'].dropna().unique():
-        tier_data = df[df['follower_tier'] == tier]
+
+    # Create engagement tiers if not exists
+    if 'engagement_tier' not in df.columns:
+        if 'engagement_rate' not in df.columns:
+            logger.warning("engagement_rate column missing")
+            return {}
+        df['engagement_tier'] = pd.cut(
+            df['engagement_rate'].fillna(0),
+            bins=[0, 0.05, 0.10, 0.15, 1.0],
+            labels=['Low_Engagement', 'Medium_Engagement', 'High_Engagement', 'Elite_Engagement']
+        )
+
+    for tier in df['engagement_tier'].dropna().unique():
+        tier_data = df[df['engagement_tier'] == tier]
         if len(tier_data) == 0:
             continue
             
@@ -345,6 +360,6 @@ def get_creator_analysis_summary(df: pd.DataFrame) -> Dict[str, Any]:
         'unique_creators': df['author_username'].nunique() if 'author_username' in df.columns else 0,
         'verified_creators': df['author_verified'].sum() if 'author_verified' in df.columns else 0,
         'avg_followers_per_creator': df['author_followers'].mean() if 'author_followers' in df.columns else 0,
-        'follower_tiers_represented': df['follower_tier'].nunique() if 'follower_tier' in df.columns else 0,
+        'engagement_tiers_represented': df['engagement_tier'].nunique() if 'engagement_tier' in df.columns else 0,
         'creators_with_multiple_videos': (df['author_username'].value_counts() > 1).sum() if 'author_username' in df.columns else 0
     }

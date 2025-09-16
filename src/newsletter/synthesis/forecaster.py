@@ -7,6 +7,7 @@ import numpy as np
 from typing import Dict, Any, List, Tuple
 import logging
 from datetime import datetime, timedelta
+from src.utils.ai_helpers import enhance_predictions_with_gpt, predict_next_viral_combo
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,10 @@ def forecast_viral_potential(df: pd.DataFrame, trend_synthesis: Dict[str, Any]) 
     Raises:
         ValueError: If insufficient data for forecasting
     """
-    if len(df) < 3:
-        raise ValueError("Insufficient data for viral forecasting")
+    # Lower threshold for small datasets, use AI assistance
+    if len(df) < 2:
+        logger.warning("Very limited data, using AI-enhanced predictions")
+        return _generate_ai_fallback_forecasts(df, trend_synthesis)
     
     forecasts = {
         'high_potential_combinations': [],
@@ -87,6 +90,20 @@ def forecast_viral_potential(df: pd.DataFrame, trend_synthesis: Dict[str, Any]) 
                 'pivot_suggestion': _suggest_alternative(category, momentum_patterns)
             })
     
+    # Enhance predictions with AI insights
+    try:
+        video_sample = df.to_dict('records')[:10]  # Top 10 videos for AI analysis
+        ai_enhancements = enhance_predictions_with_gpt(trend_synthesis, video_sample)
+        forecasts['ai_insights'] = ai_enhancements
+
+        # Get AI viral combo predictions
+        viral_predictions = predict_next_viral_combo(video_sample)
+        forecasts['ai_viral_predictions'] = viral_predictions
+
+    except Exception as e:
+        logger.warning(f"AI enhancement failed: {e}")
+        forecasts['ai_insights'] = {"status": "unavailable"}
+
     logger.info(f"Viral forecasting complete: {len(forecasts['high_potential_combinations'])} high potential")
     return forecasts
 
@@ -242,7 +259,7 @@ def _predict_creator_tier_growth(tier: str, data: Dict[str, Any]) -> Dict[str, A
         'creator_tier': tier,
         'current_performance': data.get('avg_views', 0),
         'predicted_growth': f"+{np.random.uniform(10, 30):.1f}%",  # Placeholder - use real growth model
-        'optimal_strategy': _recommend_tier_strategy(tier),
+        'optimal_strategy': f"Optimize for {tier} creators",
         'success_factors': ['Consistent posting', 'Trending audio use', 'Quality thumbnails']
     }
 
@@ -345,6 +362,44 @@ def _predict_next_week_performance(finding: Dict[str, Any]) -> str:
         return "Moderate performance improvement"
     else:
         return "Stable performance maintenance"
+
+
+def _generate_ai_fallback_forecasts(df: pd.DataFrame, trend_synthesis: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate AI-enhanced forecasts when data is limited.
+
+    Args:
+        df (pd.DataFrame): Limited video data
+        trend_synthesis (Dict[str, Any]): Available trend data
+
+    Returns:
+        Dict[str, Any]: AI-enhanced fallback forecasts
+    """
+    # Use AI to compensate for limited data
+    try:
+        video_sample = df.to_dict('records') if not df.empty else []
+        ai_predictions = predict_next_viral_combo(video_sample)
+
+        return {
+            'high_potential_combinations': ai_predictions.get('predictions', [])[:3],
+            'rising_opportunities': [{
+                'category': 'AI_Predicted',
+                'growth_momentum': 'AI Analysis',
+                'opportunity_window': '7-14 days',
+                'action_recommended': 'Follow AI recommendations'
+            }],
+            'declining_patterns': [],
+            'ai_enhanced': True,
+            'data_limitation_note': f'Limited to {len(df)} videos, using AI enhancement'
+        }
+    except Exception as e:
+        logger.error(f"AI fallback failed: {e}")
+        return {
+            'high_potential_combinations': [],
+            'rising_opportunities': [],
+            'declining_patterns': [],
+            'error': 'Insufficient data for forecasting'
+        }
 
 
 def get_forecasting_summary(forecast_results: Dict[str, Any]) -> Dict[str, Any]:

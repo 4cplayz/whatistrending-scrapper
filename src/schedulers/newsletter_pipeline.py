@@ -58,7 +58,7 @@ def run_newsletter_pipeline():
         from src.newsletter.analyzers.creator.creator_analyzer import analyze_creator_tier_performance
         from src.newsletter.analyzers.technical.specs_analyzer import analyze_duration_performance
         from src.newsletter.analyzers.technical.timing_analyzer import analyze_upload_hour_performance
-        from src.newsletter.analyzers.technical.quality_analyzer import analyze_quality_score_performance
+        from src.newsletter.analyzers.technical.quality_analyzer import analyze_viral_score_performance
         from src.newsletter.analyzers.text.hashtag_analyzer import analyze_individual_hashtag_performance
         from src.newsletter.analyzers.text.description_analyzer import get_description_analysis_summary
         from src.newsletter.analyzers.text.music_analyzer import analyze_individual_music_performance
@@ -119,7 +119,7 @@ def run_newsletter_pipeline():
         # Technical analyzers
         analyzer_results['duration_analysis'] = analyze_duration_performance(df)
         analyzer_results['timing_analysis'] = analyze_upload_hour_performance(df)
-        analyzer_results['quality_analysis'] = analyze_quality_score_performance(df)
+        analyzer_results['quality_analysis'] = analyze_viral_score_performance(df)
         
         # Text analyzers
         analyzer_results['hashtag_analysis'] = analyze_individual_hashtag_performance(df)

@@ -45,7 +45,7 @@ def test_categorical_performance_differences(df: pd.DataFrame) -> Dict[str, Any]
     # Test categorical variables against performance
     categorical_variables = [
         'car_brand', 'hook_type', 'transition_type', 'edit_style',
-        'music_type', 'follower_tier', 'engagement_tier'
+        'music_type', 'engagement_tier'
     ]
     
     for variable in categorical_variables:
@@ -54,14 +54,14 @@ def test_categorical_performance_differences(df: pd.DataFrame) -> Dict[str, Any]
             
         # Filter out rows with missing values
         test_data = df.dropna(subset=[variable, 'performance_quartile'])
-        if len(test_data) < 5:  # Minimum sample size for chi-square
+        if len(test_data) < 3:  # Lower threshold for small datasets
             continue
             
         # Create contingency table
         contingency_table = pd.crosstab(test_data[variable], test_data['performance_quartile'])
         
-        # Skip if table is too sparse
-        if contingency_table.size < 4 or (contingency_table < 5).sum().sum() > contingency_table.size * 0.2:
+        # Skip if table is too sparse - relaxed for small datasets
+        if contingency_table.size < 2 or (contingency_table < 2).sum().sum() > contingency_table.size * 0.5:
             continue
             
         try:
@@ -138,7 +138,7 @@ def test_numerical_performance_differences(df: pd.DataFrame, analyzer_results: D
             group_true = df[df[binary_column] == True][metric].dropna()
             group_false = df[df[binary_column] == False][metric].dropna()
             
-            if len(group_true) < 3 or len(group_false) < 3:  # Minimum sample size
+            if len(group_true) < 2 or len(group_false) < 2:  # Lower threshold for small datasets
                 continue
                 
             try:
@@ -200,7 +200,7 @@ def test_multi_group_differences(df: pd.DataFrame) -> Dict[str, Any]:
     # Test multi-category variables
     multi_category_variables = [
         'car_brand', 'hook_type', 'transition_type', 'edit_style',
-        'follower_tier', 'engagement_tier', 'duration_category'
+        'engagement_tier', 'duration_category'
     ]
     
     performance_metrics = ['views', 'engagement_rate']
@@ -219,11 +219,11 @@ def test_multi_group_differences(df: pd.DataFrame) -> Dict[str, Any]:
             
             for category in df[variable].dropna().unique():
                 group_data = df[df[variable] == category][metric].dropna()
-                if len(group_data) >= 3:  # Minimum sample size
+                if len(group_data) >= 2:  # Lower threshold for small datasets
                     groups.append(group_data)
                     group_names.append(category)
             
-            if len(groups) < 3:  # Need at least 3 groups
+            if len(groups) < 2:  # Need at least 2 groups for comparison
                 continue
                 
             try:
@@ -367,15 +367,15 @@ def _classify_eta_squared(eta_squared: float) -> str:
 def _estimate_power_t_test(sample_size: int, effect_size: float) -> float:
     """Rough power estimation for t-test."""
     if sample_size < 10:
-        return 0.2
+        return 0.1
     elif effect_size > 0.8 and sample_size > 20:
         return 0.9
-    elif effect_size > 0.5 and sample_size > 30:
+    elif effect_size > 0.5 and sample_size > 15:
         return 0.8
-    elif effect_size > 0.2 and sample_size > 50:
+    elif effect_size > 0.2 and sample_size > 25:
         return 0.7
     else:
-        return 0.5
+        return 0.4
 
 
 def _estimate_power_chi_square(sample_size: int, effect_size: float) -> float:

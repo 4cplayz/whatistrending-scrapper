@@ -10,35 +10,35 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def analyze_quality_score_performance(df: pd.DataFrame) -> Dict[str, Any]:
+def analyze_viral_score_performance(df: pd.DataFrame) -> Dict[str, Any]:
     """
-    Analyze viral performance by video quality score.
-    
+    Analyze viral performance by viral score tiers.
+
     Args:
-        df (pd.DataFrame): Video data with quality_score and viral metrics
-        
+        df (pd.DataFrame): Video data with viral_score and engagement metrics
+
     Returns:
-        Dict[str, Any]: Quality score performance analysis
+        Dict[str, Any]: Viral score performance analysis
     """
-    if 'quality_score' not in df.columns:
-        logger.warning("quality_score column missing")
+    if 'viral_score' not in df.columns:
+        logger.warning("viral_score column missing")
         return {}
-    
+
     quality_analysis = {}
     viral_threshold = df['views'].quantile(0.8)
-    
-    # Create quality tiers
-    df['quality_tier'] = pd.cut(
-        df['quality_score'].fillna(0), 
+
+    # Create viral score tiers
+    df['viral_tier'] = pd.cut(
+        df['viral_score'].fillna(0),
         bins=[0, 0.3, 0.6, 0.8, 1.0],
         labels=['Low', 'Medium', 'High', 'Premium']
     )
     
-    for tier in df['quality_tier'].dropna().unique():
-        tier_data = df[df['quality_tier'] == tier]
+    for tier in df['viral_tier'].dropna().unique():
+        tier_data = df[df['viral_tier'] == tier]
         if len(tier_data) == 0:
             continue
-            
+
         quality_analysis[tier] = {
             'avg_views': float(tier_data['views'].mean()),
             'avg_engagement': float(tier_data['engagement_rate'].mean()),
@@ -46,56 +46,56 @@ def analyze_quality_score_performance(df: pd.DataFrame) -> Dict[str, Any]:
             'video_count': len(tier_data),
             'viral_videos': int((tier_data['views'] >= viral_threshold).sum()),
             'viral_success_rate': float((tier_data['views'] >= viral_threshold).mean()),
-            'avg_quality_score': float(tier_data['quality_score'].mean()),
-            'quality_range': (float(tier_data['quality_score'].min()), float(tier_data['quality_score'].max()))
+            'avg_viral_score': float(tier_data['viral_score'].mean()),
+            'viral_range': (float(tier_data['viral_score'].min()), float(tier_data['viral_score'].max()))
         }
+
+    # Calculate viral-performance correlation
+    viral_correlation = df['viral_score'].corr(df['views'])
+    quality_analysis['viral_views_correlation'] = float(viral_correlation) if not np.isnan(viral_correlation) else 0.0
     
-    # Calculate quality-performance correlation
-    quality_correlation = df['quality_score'].corr(df['views'])
-    quality_analysis['quality_views_correlation'] = float(quality_correlation) if not np.isnan(quality_correlation) else 0.0
-    
-    logger.info(f"Analyzed quality score performance: {len(quality_analysis)} tiers")
+    logger.info(f"Analyzed viral score performance: {len(quality_analysis)} tiers")
     return quality_analysis
 
 
-def analyze_engagement_quality_correlation(df: pd.DataFrame) -> Dict[str, Any]:
+def analyze_engagement_viral_correlation(df: pd.DataFrame) -> Dict[str, Any]:
     """
-    Analyze correlation between engagement metrics and video quality.
-    
+    Analyze correlation between engagement metrics and viral score.
+
     Args:
-        df (pd.DataFrame): Video data with quality and engagement metrics
-        
+        df (pd.DataFrame): Video data with viral_score and engagement metrics
+
     Returns:
-        Dict[str, Any]: Engagement-quality correlation analysis
+        Dict[str, Any]: Engagement-viral correlation analysis
     """
     correlation_analysis = {}
-    
-    if 'quality_score' not in df.columns:
-        logger.warning("quality_score column missing")
+
+    if 'viral_score' not in df.columns:
+        logger.warning("viral_score column missing")
         return correlation_analysis
-    
+
     # Calculate correlations with different engagement metrics
     engagement_metrics = ['views', 'likes', 'comments', 'shares', 'engagement_rate']
-    
+
     for metric in engagement_metrics:
         if metric in df.columns:
-            correlation = df['quality_score'].corr(df[metric])
-            correlation_analysis[f"quality_{metric}_correlation"] = float(correlation) if not np.isnan(correlation) else 0.0
-    
-    # Analyze high-quality content performance
-    high_quality = df[df['quality_score'] >= 0.8] if 'quality_score' in df.columns else pd.DataFrame()
-    low_quality = df[df['quality_score'] < 0.4] if 'quality_score' in df.columns else pd.DataFrame()
-    
-    if len(high_quality) > 0 and len(low_quality) > 0:
-        correlation_analysis['quality_impact'] = {
-            'high_quality_avg_views': float(high_quality['views'].mean()),
-            'low_quality_avg_views': float(low_quality['views'].mean()),
-            'quality_advantage': float(high_quality['views'].mean() / low_quality['views'].mean()) if low_quality['views'].mean() > 0 else 0,
-            'high_quality_engagement': float(high_quality['engagement_rate'].mean()),
-            'low_quality_engagement': float(low_quality['engagement_rate'].mean())
+            correlation = df['viral_score'].corr(df[metric])
+            correlation_analysis[f"viral_{metric}_correlation"] = float(correlation) if not np.isnan(correlation) else 0.0
+
+    # Analyze high-viral content performance
+    high_viral = df[df['viral_score'] >= 0.8] if 'viral_score' in df.columns else pd.DataFrame()
+    low_viral = df[df['viral_score'] < 0.4] if 'viral_score' in df.columns else pd.DataFrame()
+
+    if len(high_viral) > 0 and len(low_viral) > 0:
+        correlation_analysis['viral_impact'] = {
+            'high_viral_avg_views': float(high_viral['views'].mean()),
+            'low_viral_avg_views': float(low_viral['views'].mean()),
+            'viral_advantage': float(high_viral['views'].mean() / low_viral['views'].mean()) if low_viral['views'].mean() > 0 else 0,
+            'high_viral_engagement': float(high_viral['engagement_rate'].mean()),
+            'low_viral_engagement': float(low_viral['engagement_rate'].mean())
         }
     
-    logger.info("Analyzed engagement-quality correlations")
+    logger.info("Analyzed engagement-viral correlations")
     return correlation_analysis
 
 
@@ -245,17 +245,17 @@ def get_quality_recommendations(quality_analyses: Dict[str, Any]) -> Dict[str, A
     """
     recommendations = {}
     
-    # Quality score recommendations
-    if 'quality_score_analysis' in quality_analyses:
-        quality_data = quality_analyses['quality_score_analysis']
-        if quality_data:
+    # Viral score recommendations
+    if 'viral_score_analysis' in quality_analyses:
+        viral_data = quality_analyses['viral_score_analysis']
+        if viral_data:
             best_tier = max(
-                [(tier, data) for tier, data in quality_data.items() if tier != 'quality_views_correlation'],
+                [(tier, data) for tier, data in viral_data.items() if tier != 'viral_views_correlation'],
                 key=lambda x: x[1].get('avg_views', 0)
             )
-            recommendations['target_quality_tier'] = {
+            recommendations['target_viral_tier'] = {
                 'tier': best_tier[0],
-                'min_score': best_tier[1]['quality_range'][0],
+                'min_score': best_tier[1]['viral_range'][0],
                 'expected_views': best_tier[1]['avg_views']
             }
     
@@ -313,12 +313,12 @@ def get_quality_analysis_summary(df: pd.DataFrame) -> Dict[str, Any]:
         'total_videos': len(df)
     }
     
-    if 'quality_score' in df.columns:
+    if 'viral_score' in df.columns:
         summary.update({
-            'avg_quality_score': float(df['quality_score'].mean()),
-            'quality_score_range': (float(df['quality_score'].min()), float(df['quality_score'].max())),
-            'high_quality_videos': int((df['quality_score'] >= 0.8).sum()),
-            'low_quality_videos': int((df['quality_score'] < 0.4).sum())
+            'avg_viral_score': float(df['viral_score'].mean()),
+            'viral_score_range': (float(df['viral_score'].min()), float(df['viral_score'].max())),
+            'high_viral_videos': int((df['viral_score'] >= 0.8).sum()),
+            'low_viral_videos': int((df['viral_score'] < 0.4).sum())
         })
     
     if 'width' in df.columns and 'height' in df.columns:
