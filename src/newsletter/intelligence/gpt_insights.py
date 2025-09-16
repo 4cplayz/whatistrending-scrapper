@@ -43,20 +43,25 @@ async def generate_all_gpt_insights_concurrent(pattern_analysis: Dict[str, Any],
     gpt_insights = {}
     task_names = ['creator_recommendations', 'content_gap_analysis', 'trend_predictions', 'competitive_intelligence']
     
+    failed_tasks = []
     for i, (task_name, result) in enumerate(zip(task_names, results)):
         if isinstance(result, Exception):
             logger.error(f"GPT task {task_name} failed: {result}")
-            gpt_insights[task_name] = _get_fallback_data(task_name)
+            failed_tasks.append(task_name)
         else:
             gpt_insights[task_name] = result
+
+    # FAIL FAST - Don't generate newsletter with missing critical sections
+    if failed_tasks:
+        raise Exception(f"Critical GPT tasks failed: {failed_tasks}. Cannot generate newsletter with incomplete data.")
     
-    # Generate final synthesis
+    # Generate final synthesis - CRITICAL, no fallback
     try:
         synthesis_task = _synthesize_actionable_intelligence_async(client, list(gpt_insights.values()))
         gpt_insights['actionable_intelligence'] = await synthesis_task
     except Exception as e:
         logger.error(f"GPT synthesis failed: {e}")
-        gpt_insights['actionable_intelligence'] = _get_fallback_data('actionable_intelligence')
+        raise Exception(f"Final synthesis failed: {e}. Newsletter cannot be completed.")
     
     logger.info(f"Concurrent GPT analysis complete: {len(gpt_insights)} insights generated")
     return gpt_insights
@@ -70,52 +75,90 @@ async def _generate_creator_recommendations_async(client: AsyncOpenAI,
         # Create focused summary to reduce tokens
         summary = _create_focused_summary(pattern_analysis, statistical_evidence, "creator_recommendations")
         
-        prompt = f"""You are a TikTok creator success coach. Based on this data summary, create specific recommendations:
+        prompt = f"""You are a FUNK/PHONK CAR EDIT TikTok specialist. You understand the specific car edit culture:
 
+FUNK/PHONK CAR EDIT STYLE:
+- Fast cuts & beat sync: Clips jump on every kick/snare for aggressive stuttery feel
+- Velocity edits: Slow-to-fast motion synced to bass drops
+- Shake & motion blur: Cars vibrating with the music
+- Zooms & spins: Quick push-ins/rotations for intensity
+- Dark high contrast color grading: neon purple/orange tones
+- Phonk overlays: VHS noise, film grain, retro timestamps, glowing text
+- Raw, gritty, high-energy vibe - turning car showcase into a rave
+
+ACTUAL SCRAPED VIDEO DATA:
 {summary}
+
+Based on this REAL performance data from funk/phonk car edits, create recommendations that understand this specific culture:
 
 Generate JSON with this structure:
 {{
   "new_creators": [
     {{
-      "recommendation": "Specific action for 0-10K followers",
-      "statistical_backing": "Evidence supporting this",
-      "expected_impact": "Predicted improvement",
+      "recommendation": "Specific FUNK/PHONK car edit technique for 0-10K followers",
+      "statistical_backing": "Real performance data from scraped videos",
+      "expected_impact": "Predicted improvement for phonk car editors",
       "implementation": "Easy/Medium/Hard"
     }}
   ],
   "growing_creators": [
     {{
-      "recommendation": "Specific action for 10K-100K followers",
-      "statistical_backing": "Evidence supporting this", 
-      "expected_impact": "Predicted improvement",
+      "recommendation": "Specific CAR CONTENT action for 10K-100K followers",
+      "statistical_backing": "Car video evidence supporting this",
+      "expected_impact": "Predicted improvement for car creators",
       "implementation": "Easy/Medium/Hard"
     }}
   ],
   "established_creators": [
     {{
-      "recommendation": "Specific action for 100K+ followers",
-      "statistical_backing": "Evidence supporting this",
-      "expected_impact": "Predicted improvement", 
+      "recommendation": "Specific CAR CONTENT action for 100K+ followers",
+      "statistical_backing": "Car video evidence supporting this",
+      "expected_impact": "Predicted improvement for car creators",
       "implementation": "Easy/Medium/Hard"
     }}
   ]
 }}
 
-Limit to 2 recommendations per category."""
+Limit to 2 FUNK/PHONK car edit recommendations per category. Focus on beat-sync techniques, Phonk music, aggressive transitions, and the underground car edit aesthetic - NOT generic TikTok advice."""
         
-        response = await client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=1500
-        )
-        
-        return json.loads(response.choices[0].message.content)
+        # Force structured output with retries
+        for attempt in range(3):  # 3 retry attempts
+            response = await client.chat.completions.create(
+                model="gpt-4o",  # gpt-4o supports JSON mode
+                messages=[
+                    {"role": "system", "content": "You MUST return valid JSON only. No explanation text. Focus on CAR CONTENT ONLY."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # Lower temperature for consistent structure
+                max_tokens=1500,
+                response_format={"type": "json_object"}  # Force JSON response
+            )
+
+            try:
+                content = response.choices[0].message.content.strip()
+                if not content:
+                    logger.warning(f"Empty response attempt {attempt + 1}")
+                    continue
+
+                result = json.loads(content)
+                # Validate structure has required keys
+                if _validate_creator_recommendations_structure(result):
+                    return result
+                else:
+                    logger.warning(f"Invalid structure attempt {attempt + 1}: {result}")
+                    continue
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON decode failed attempt {attempt + 1}: {e}")
+                logger.warning(f"Response content: {response.choices[0].message.content[:200]}...")
+                continue
+
+        # All retries failed - ABORT instead of fallback
+        raise Exception("Failed to generate valid creator recommendations after 3 attempts")
         
     except Exception as e:
         logger.error(f"Async creator recommendations failed: {e}")
-        return _get_fallback_data('creator_recommendations')
+        # NO FALLBACK - Re-raise to fail entire process
+        raise Exception(f"Creator recommendations failed: {e}")
 
 
 async def _generate_content_gaps_async(client: AsyncOpenAI,
@@ -126,9 +169,11 @@ async def _generate_content_gaps_async(client: AsyncOpenAI,
         # Create focused summary
         summary = _create_focused_summary(analyzer_results, pattern_analysis, "content_gaps")
         
-        prompt = f"""You are a TikTok content strategist. Identify content opportunities from this data:
+        prompt = f"""You are a CAR CONTENT TikTok strategist. Identify CAR CONTENT opportunities from this automotive data:
 
 {summary}
+
+IMPORTANT: Every opportunity MUST be about CAR CONTENT (car brands, automotive content, car video opportunities, etc.).
 
 Generate JSON with this structure:
 {{
@@ -151,17 +196,26 @@ Generate JSON with this structure:
 Limit to 3 combinations and 2 blue ocean opportunities."""
         
         response = await client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You MUST return valid JSON only. No explanation text. Focus on CAR CONTENT ONLY."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.4,
-            max_tokens=1200
+            max_tokens=1200,
+            response_format={"type": "json_object"}
         )
         
-        return json.loads(response.choices[0].message.content)
-        
+        content = response.choices[0].message.content.strip()
+        if not content:
+            raise Exception("Empty response from GPT for content gaps")
+
+        return json.loads(content)
+
     except Exception as e:
         logger.error(f"Async content gaps failed: {e}")
-        return _get_fallback_data('content_gap_analysis')
+        # NO FALLBACK - Re-raise to fail entire process
+        raise Exception(f"Content gap analysis failed: {e}")
 
 
 async def _generate_trend_predictions_async(client: AsyncOpenAI,
@@ -172,43 +226,81 @@ async def _generate_trend_predictions_async(client: AsyncOpenAI,
         # Create focused summary
         summary = _create_focused_summary(pattern_analysis, analyzer_results, "trend_predictions")
         
-        prompt = f"""You are a TikTok trend forecaster. Predict next week's trends from this data:
+        prompt = f"""You are a FUNK/PHONK CAR EDIT trend forecaster. You understand the underground car edit culture:
 
+FUNK/PHONK CAR EDIT CULTURE:
+- Fast cuts & beat sync: Clips jump on every kick/snare for aggressive stuttery feel
+- Velocity edits: Slow-to-fast motion synced to bass drops
+- Shake & motion blur: Cars vibrating with Phonk music
+- Zooms & spins: Quick push-ins/rotations for intensity
+- Dark high contrast color grading: neon purple/orange tones
+- Phonk overlays: VHS noise, film grain, retro timestamps, glowing text
+- Raw, gritty, high-energy vibe - turning car showcase into a rave
+
+ACTUAL SCRAPED PERFORMANCE DATA:
 {summary}
+
+Predict FUNK/PHONK car edit trends based on this real data:
 
 Generate JSON with this structure:
 {{
   "content_trend_predictions": [
     {{
-      "trend": "Specific content trend prediction",
+      "trend": "Specific CAR CONTENT trend prediction",
       "confidence": "High/Medium/Low",
       "timeline": "When it will peak",
-      "creator_action": "What creators should do"
+      "creator_action": "What car creators should do"
     }}
   ],
   "creator_strategy_trends": [
     {{
-      "strategy": "Creator approach that will gain momentum",
-      "evidence": "Current data supporting this",
+      "strategy": "Car creator approach that will gain momentum",
+      "evidence": "Current automotive data supporting this",
       "success_probability": "Likelihood percentage"
     }}
   ]
 }}
 
-Limit to 3 content trends and 2 strategy trends."""
+Limit to 3 FUNK/PHONK car edit trends and 2 underground car edit strategies. Focus on Phonk music, beat-sync techniques, aggressive transitions, and the raw car edit aesthetic."""
         
-        response = await client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=1200
-        )
-        
-        return json.loads(response.choices[0].message.content)
-        
+        # Force structured output with retries
+        for attempt in range(3):  # 3 retry attempts
+            response = await client.chat.completions.create(
+                model="gpt-4o",  # gpt-4o supports JSON mode
+                messages=[
+                    {"role": "system", "content": "You MUST return valid JSON only. No explanation text. Focus on CAR TRENDS ONLY - automotive, vehicles, car brands, car content."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # Lower temperature for consistent structure
+                max_tokens=1200,
+                response_format={"type": "json_object"}  # Force JSON response
+            )
+
+            try:
+                content = response.choices[0].message.content.strip()
+                if not content:
+                    logger.warning(f"Empty response attempt {attempt + 1}")
+                    continue
+
+                result = json.loads(content)
+                # Validate structure has required keys and CAR content
+                if _validate_trend_predictions_structure(result):
+                    return result
+                else:
+                    logger.warning(f"Invalid trend predictions structure attempt {attempt + 1}: {result}")
+                    continue
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON decode failed attempt {attempt + 1}: {e}")
+                logger.warning(f"Response content: {response.choices[0].message.content[:200]}...")
+                continue
+
+        # All retries failed - ABORT instead of fallback
+        raise Exception("Failed to generate valid trend predictions after 3 attempts")
+
     except Exception as e:
         logger.error(f"Async trend predictions failed: {e}")
-        return _get_fallback_data('trend_predictions')
+        # DO NOT USE FALLBACK - Re-raise to fail the entire process
+        raise Exception(f"Trend predictions generation failed: {e}")
 
 
 async def _generate_competitive_intelligence_async(client: AsyncOpenAI,
@@ -219,9 +311,11 @@ async def _generate_competitive_intelligence_async(client: AsyncOpenAI,
         # Create focused summary
         summary = _create_focused_summary(analyzer_results, pattern_analysis, "competitive_intel")
         
-        prompt = f"""You are a TikTok competitive analyst. Analyze the competitive landscape from this data:
+        prompt = f"""You are a CAR CONTENT TikTok competitive analyst. Analyze the CAR CONTENT competitive landscape from this automotive data:
 
 {summary}
+
+IMPORTANT: Every analysis MUST be about CAR CONTENT creators and automotive video competition.
 
 Generate JSON with this structure:
 {{
@@ -242,19 +336,28 @@ Generate JSON with this structure:
 }}
 
 Limit to 2 market leaders and 2 opportunities."""
-        
+
         response = await client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You MUST return valid JSON only. No explanation text. Focus on CAR CONTENT ONLY."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1000,
+            response_format={"type": "json_object"}
         )
         
-        return json.loads(response.choices[0].message.content)
-        
+        content = response.choices[0].message.content.strip()
+        if not content:
+            raise Exception("Empty response from GPT for competitive intelligence")
+
+        return json.loads(content)
+
     except Exception as e:
         logger.error(f"Async competitive intelligence failed: {e}")
-        return _get_fallback_data('competitive_intelligence')
+        # NO FALLBACK - Re-raise to fail entire process
+        raise Exception(f"Competitive intelligence failed: {e}")
 
 
 async def _synthesize_actionable_intelligence_async(client: AsyncOpenAI,
@@ -289,17 +392,26 @@ Generate JSON with this structure:
 Limit to 5 immediate actions."""
         
         response = await client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You MUST return valid JSON only. No explanation text. Focus on CAR CONTENT ONLY."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1000,
+            response_format={"type": "json_object"}
         )
-        
-        return json.loads(response.choices[0].message.content)
+
+        content = response.choices[0].message.content.strip()
+        if not content:
+            raise Exception("Empty response from GPT for synthesis")
+
+        return json.loads(content)
         
     except Exception as e:
         logger.error(f"Async synthesis failed: {e}")
-        return _get_fallback_data('actionable_intelligence')
+        # NO FALLBACK - Re-raise to fail entire process
+        raise Exception(f"Actionable intelligence synthesis failed: {e}")
 
 
 def generate_creator_recommendations(pattern_analysis: Dict[str, Any], 
@@ -373,7 +485,7 @@ def generate_creator_recommendations(pattern_analysis: Dict[str, Any],
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
@@ -472,7 +584,7 @@ def generate_content_gap_analysis(analyzer_results: Dict[str, Any],
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4  # Slightly higher for creativity
         )
@@ -559,7 +671,7 @@ def generate_competitive_intelligence(analyzer_results: Dict[str, Any],
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
@@ -640,7 +752,7 @@ def generate_trend_predictions(pattern_analysis: Dict[str, Any],
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4
         )
@@ -714,7 +826,7 @@ def synthesize_actionable_intelligence(all_gpt_insights: List[Dict[str, Any]]) -
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
@@ -784,33 +896,56 @@ def generate_all_gpt_insights_sync(pattern_analysis: Dict[str, Any],
         ))
     except Exception as e:
         logger.error(f"Concurrent GPT insights failed: {e}")
-        # Fallback to basic insights
-        return {
-            'creator_recommendations': _get_fallback_data('creator_recommendations'),
-            'content_gap_analysis': _get_fallback_data('content_gap_analysis'),
-            'trend_predictions': _get_fallback_data('trend_predictions'),
-            'competitive_intelligence': _get_fallback_data('competitive_intelligence'),
-            'actionable_intelligence': _get_fallback_data('actionable_intelligence')
-        }
+        # NO FALLBACK - Re-raise to fail the entire newsletter generation
+        raise Exception(f"GPT insights generation failed: {e}. Newsletter cannot be generated with incomplete data.")
 
 
 def _create_focused_summary(data1: Dict[str, Any], data2: Dict[str, Any], focus_area: str) -> str:
     """Create focused summary for specific GPT task to reduce token usage."""
     
     if focus_area == "creator_recommendations":
-        # Focus on top performers for creator advice
-        top_items = []
-        for category, analysis in data1.items():
-            if isinstance(analysis, dict) and analysis:
-                top_item = max(analysis.items(), key=lambda x: x[1].get('avg_views', 0) if isinstance(x[1], dict) else 0, default=('Unknown', {}))
-                if len(top_item) == 2 and isinstance(top_item[1], dict):
-                    top_items.append(f"- {category}: {top_item[0]} ({top_item[1].get('avg_views', 0):,} avg views)")
-        
-        return f"""Top Performing Elements:
-{chr(10).join(top_items[:5])}
+        # Get REAL performance data for Funk/Phonk car edits
+        performance_data = []
 
-Statistical Evidence: {len(data2.get('significant_correlations', []))} significant correlations found
-Sample Size: Limited data - focus on observational patterns"""
+        # Top car brands with detailed performance
+        if 'brand_analysis' in data1 and isinstance(data1['brand_analysis'], dict):
+            brands = sorted(data1['brand_analysis'].items(),
+                          key=lambda x: x[1].get('avg_views', 0) if isinstance(x[1], dict) else 0,
+                          reverse=True)[:3]
+            for brand, data in brands:
+                if isinstance(data, dict):
+                    performance_data.append(f"🏆 TOP CAR BRAND: {brand}")
+                    performance_data.append(f"   - {data.get('avg_views', 0):,} avg views across {data.get('video_count', 0)} videos")
+                    performance_data.append(f"   - {data.get('avg_engagement', 0)*100:.1f}% engagement rate")
+
+        # Top hooks with context
+        if 'hook_analysis' in data1 and isinstance(data1['hook_analysis'], dict):
+            hooks = sorted(data1['hook_analysis'].items(),
+                         key=lambda x: x[1].get('avg_views', 0) if isinstance(x[1], dict) else 0,
+                         reverse=True)[:3]
+            for hook, data in hooks:
+                if isinstance(data, dict):
+                    performance_data.append(f"🎬 TOP HOOK: {hook}")
+                    performance_data.append(f"   - {data.get('avg_views', 0):,} avg views, {data.get('video_count', 0)} videos")
+
+        # Top hashtags
+        if 'hashtag_analysis' in data1 and isinstance(data1['hashtag_analysis'], dict):
+            hashtags = sorted(data1['hashtag_analysis'].items(),
+                            key=lambda x: x[1].get('avg_views', 0) if isinstance(x[1], dict) else 0,
+                            reverse=True)[:3]
+            for hashtag, data in hashtags:
+                if isinstance(data, dict):
+                    performance_data.append(f"📱 TOP HASHTAG: #{hashtag}")
+                    performance_data.append(f"   - {data.get('avg_views', 0):,} avg views, used {data.get('usage_count', 0)} times")
+
+        return f"""REAL FUNK/PHONK CAR EDIT PERFORMANCE DATA:
+
+{chr(10).join(performance_data)}
+
+📊 STATISTICAL INSIGHTS:
+- {len(data2.get('significant_differences', []))} significant performance differences found
+- Use this ACTUAL data to create recommendations for the Funk/Phonk car edit community
+- Focus on what's PROVEN to work in this specific underground aesthetic"""
     
     elif focus_area == "content_gaps":
         # Focus on underused combinations
@@ -877,84 +1012,78 @@ Focus: Synthesize into actionable intelligence
 Target: Immediate creator actions with high impact potential"""
 
 
-def _get_fallback_data(insight_type: str) -> Dict[str, Any]:
-    """Provide fallback data when GPT calls fail."""
-    
-    fallback_data = {
-        'creator_recommendations': {
-            'new_creators': [{
-                'recommendation': 'Focus on trending content elements',
-                'statistical_backing': 'Based on performance analysis',
-                'expected_impact': 'Improved engagement potential',
-                'implementation': 'Easy'
-            }],
-            'growing_creators': [{
-                'recommendation': 'Diversify content approach',
-                'statistical_backing': 'Observational patterns',
-                'expected_impact': 'Audience growth',
-                'implementation': 'Medium'
-            }],
-            'established_creators': [{
-                'recommendation': 'Maintain proven strategies',
-                'statistical_backing': 'Performance consistency',
-                'expected_impact': 'Sustained engagement',
-                'implementation': 'Easy'
-            }]
-        },
-        'content_gap_analysis': {
-            'underexplored_combinations': [{
-                'combination': 'Unique car brand + trending music',
-                'viral_probability': '70%',
-                'competition_level': 'Medium'
-            }],
-            'blue_ocean_opportunities': [{
-                'unique_approach': 'Educational car content',
-                'market_validation': 'Growing interest in car knowledge',
-                'first_mover_advantage': 'Establish expertise authority'
-            }]
-        },
-        'trend_predictions': {
-            'content_trend_predictions': [{
-                'trend': 'Short-form car education content rising',
-                'confidence': 'Medium',
-                'timeline': 'Next 2 weeks',
-                'creator_action': 'Create informative car content'
-            }],
-            'creator_strategy_trends': [{
-                'strategy': 'Multi-platform content approach',
-                'evidence': 'Cross-platform success patterns',
-                'success_probability': '75%'
-            }]
-        },
-        'competitive_intelligence': {
-            'market_leaders': [{
-                'success_factors': 'Consistent high-quality content',
-                'content_formula': 'Engaging visuals + trending audio',
-                'vulnerability': 'Limited content variety'
-            }],
-            'competitive_opportunities': [{
-                'niche_opportunity': 'Underserved car categories',
-                'entry_strategy': 'Focus on specific car types',
-                'differentiation_approach': 'Unique editing style'
-            }]
-        },
-        'actionable_intelligence': {
-            'immediate_actions': [{
-                'action': 'Analyze top performing content in your niche',
-                'impact': 'Better content strategy',
-                'effort': 'Easy',
-                'timeline': '1 day'
-            }],
-            'viral_success_formula': {
-                'content_elements': 'High-quality visuals + trending audio',
-                'timing_strategy': 'Peak engagement hours',
-                'engagement_tactics': 'Strong opening hooks',
-                'success_probability': '70%'
-            }
-        }
-    }
-    
-    return fallback_data.get(insight_type, {})
+def _validate_creator_recommendations_structure(result: Dict[str, Any]) -> bool:
+    """Validate creator recommendations has required structure and CAR content."""
+    required_keys = ['new_creators', 'growing_creators', 'established_creators']
+
+    if not all(key in result for key in required_keys):
+        return False
+
+    # Check each category has recommendations
+    for key in required_keys:
+        if not isinstance(result[key], list) or len(result[key]) == 0:
+            return False
+
+        # Validate each recommendation has required fields
+        for rec in result[key]:
+            if not isinstance(rec, dict):
+                return False
+            if not all(field in rec for field in ['recommendation', 'statistical_backing', 'expected_impact', 'implementation']):
+                return False
+
+            # Check content is related to FUNK/PHONK car editing culture
+            content_text = str(rec.get('recommendation', '')).lower()
+            car_words = ['car', 'vehicle', 'automotive', 'engine', 'ferrari', 'lamborghini', 'tesla', 'bmw', 'mercedes']
+            phonk_edit_words = ['beat sync', 'velocity edit', 'motion blur', 'color grading', 'phonk', 'funk', 'bass drop',
+                               'fast cuts', 'shake', 'zoom', 'spin', 'vhs noise', 'film grain', 'retro', 'neon', 'contrast']
+            content_words = ['video', 'content', 'creator', 'tiktok', 'edit', 'transition', 'hook', 'viral', 'engagement']
+
+            has_car_content = any(word in content_text for word in car_words)
+            has_phonk_editing = any(word in content_text for word in phonk_edit_words)
+            has_content_creation = any(word in content_text for word in content_words)
+
+            if not (has_car_content or has_phonk_editing or has_content_creation):
+                logger.warning(f"Non-relevant content detected: {rec.get('recommendation', '')}")
+                return False
+
+    return True
+
+
+def _validate_trend_predictions_structure(result: Dict[str, Any]) -> bool:
+    """Validate trend predictions has required structure and CAR content."""
+    if 'content_trend_predictions' not in result:
+        return False
+
+    predictions = result['content_trend_predictions']
+    if not isinstance(predictions, list) or len(predictions) == 0:
+        return False
+
+    for pred in predictions:
+        if not isinstance(pred, dict):
+            return False
+        if not all(field in pred for field in ['trend', 'confidence', 'timeline', 'creator_action']):
+            return False
+
+        # Check content is related to FUNK/PHONK car editing culture
+        trend_text = str(pred.get('trend', '')).lower()
+        car_words = ['car', 'vehicle', 'automotive', 'engine', 'ferrari', 'lamborghini', 'tesla', 'bmw', 'mercedes', 'supercar']
+        phonk_edit_words = ['beat sync', 'velocity edit', 'motion blur', 'color grading', 'phonk', 'funk', 'bass drop',
+                           'fast cuts', 'shake', 'zoom', 'spin', 'vhs noise', 'film grain', 'retro', 'neon', 'contrast']
+        content_words = ['video', 'content', 'creator', 'tiktok', 'viral', 'trend', 'edit', 'music', 'hook', 'transition']
+
+        has_car_content = any(word in trend_text for word in car_words)
+        has_phonk_editing = any(word in trend_text for word in phonk_edit_words)
+        has_content_creation = any(word in trend_text for word in content_words)
+
+        if not (has_car_content or has_phonk_editing or has_content_creation):
+            logger.warning(f"Non-relevant trend detected: {pred.get('trend', '')}")
+            return False
+
+    return True
+
+
+# REMOVED: _get_fallback_data function
+# No more garbage placeholder data - system will fail fast instead
 
 
 def _clean_for_json_serialization(data):
