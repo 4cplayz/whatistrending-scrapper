@@ -93,7 +93,7 @@ def status():
             {"path": "/scheduler/status", "method": "GET", "description": "Scheduler status"},
             {"path": "/scheduler/force-run", "method": "POST", "description": "Force run newsletter (testing)"}
         ],
-        "scheduler": "Weekly Sunday midnight UTC automation",
+        "scheduler": "Weekly newsletter automation (configurable schedule)",
         "timestamp": datetime.utcnow().isoformat()
     })
 
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     
     logger.info(f"🌐 Flask server starting on port {port}")
-    logger.info("📅 Weekly newsletter scheduler running (Sunday midnight UTC)")
+    logger.info("📅 Weekly newsletter scheduler running (configurable schedule)")
     logger.info("💤 Low resource usage when inactive")
     logger.info("=" * 60)
     

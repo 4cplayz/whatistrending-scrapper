@@ -23,17 +23,13 @@ logger = logging.getLogger(__name__)
 NEWSLETTER_DAY = int(os.getenv('NEWSLETTER_GENERATION_DAY', 6))  # Default: Sunday (6)
 NEWSLETTER_HOUR = int(os.getenv('NEWSLETTER_GENERATION_HOUR', 0))  # Default: 0 (midnight UTC)
 
-def _log_utc(level: str, message: str):
-    """Log message with explicit UTC timestamp."""
-    utc_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
-    formatted_msg = f"[{utc_time}] {message}"
-    getattr(logger, level.lower())(formatted_msg)
+# Track missed generation warning (simple global for now)
+_missed_warning_shown = False
 
 # Global scheduler state
 scheduler_thread = None
 scheduler_running = False
 last_successful_run = None
-
 
 # Railway optimization: Cache last newsletter date to reduce DB calls
 _cached_last_newsletter = None
@@ -43,36 +39,98 @@ def _get_last_newsletter_date() -> Optional[datetime]:
     """
     Get the date of the last generated newsletter from database.
     Railway-optimized: Caches result for 1 hour to reduce DB API calls.
-    
+
     Returns:
         Optional[datetime]: Date of last newsletter or None if no newsletters exist
     """
     global _cached_last_newsletter, _cache_timestamp
-    
+
     now = datetime.now(timezone.utc)
 
     # Railway optimization: Use cached result if less than 1 hour old
     if _cache_timestamp and (now - _cache_timestamp).total_seconds() < 3600:
         return _cached_last_newsletter
-    
+
     try:
         from src.database.client.supabase_client import get_supabase_client
-        
+
         client = get_supabase_client()
         result = client.table('newsletters').select('created_at').order('created_at', desc=True).limit(1).execute()
-        
+
         if result.data and len(result.data) > 0:
             last_date_str = result.data[0]['created_at']
-            _cached_last_newsletter = datetime.fromisoformat(last_date_str.replace('Z', '+00:00'))
+            # Ensure timezone-aware datetime for proper comparison
+            if last_date_str.endswith('Z'):
+                last_date_str = last_date_str.replace('Z', '+00:00')
+            _cached_last_newsletter = datetime.fromisoformat(last_date_str)
+            # Ensure UTC timezone if not already set
+            if _cached_last_newsletter.tzinfo is None:
+                _cached_last_newsletter = _cached_last_newsletter.replace(tzinfo=timezone.utc)
         else:
             _cached_last_newsletter = None
-            
+
         _cache_timestamp = now
         return _cached_last_newsletter
-        
+
     except Exception as e:
         logger.error(f"❌ Failed to get last newsletter date: {e}")
         return _cached_last_newsletter  # Return cached value on error
+
+def _log_utc(level: str, message: str):
+    """Log message with explicit UTC timestamp."""
+    utc_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    formatted_msg = f"[{utc_time}] {message}"
+    getattr(logger, level.lower())(formatted_msg)
+
+class WeeklyNewsletterScheduler:
+    """Modular scheduler class without global variables."""
+
+    def __init__(self):
+        self.scheduler_thread = None
+        self.scheduler_running = False
+        self.last_successful_run = None
+        self._cached_last_newsletter = None
+        self._cache_timestamp = None
+        self._missed_warning_shown = False  # Track if we've shown the missed warning for this period
+
+    def _get_last_newsletter_date(self) -> Optional[datetime]:
+        """
+        Get the date of the last generated newsletter from database.
+        Railway-optimized: Caches result for 1 hour to reduce DB API calls.
+
+        Returns:
+            Optional[datetime]: Date of last newsletter or None if no newsletters exist
+        """
+        now = datetime.now(timezone.utc)
+
+        # Railway optimization: Use cached result if less than 1 hour old
+        if self._cache_timestamp and (now - self._cache_timestamp).total_seconds() < 3600:
+            return self._cached_last_newsletter
+
+        try:
+            from src.database.client.supabase_client import get_supabase_client
+
+            client = get_supabase_client()
+            result = client.table('newsletters').select('created_at').order('created_at', desc=True).limit(1).execute()
+
+            if result.data and len(result.data) > 0:
+                last_date_str = result.data[0]['created_at']
+                # Ensure timezone-aware datetime for proper comparison
+                if last_date_str.endswith('Z'):
+                    last_date_str = last_date_str.replace('Z', '+00:00')
+                self._cached_last_newsletter = datetime.fromisoformat(last_date_str)
+                # Ensure UTC timezone if not already set
+                if self._cached_last_newsletter.tzinfo is None:
+                    self._cached_last_newsletter = self._cached_last_newsletter.replace(tzinfo=timezone.utc)
+            else:
+                self._cached_last_newsletter = None
+
+            self._cache_timestamp = now
+            return self._cached_last_newsletter
+
+        except Exception as e:
+            logger.error(f"❌ Failed to get last newsletter date: {e}")
+            return self._cached_last_newsletter  # Return cached value on error
 
 
 def _should_generate_newsletter() -> tuple[bool, str]:
@@ -82,6 +140,7 @@ def _should_generate_newsletter() -> tuple[bool, str]:
     Returns:
         tuple[bool, str]: (should_generate, reason)
     """
+    global _missed_warning_shown
     now = datetime.now(timezone.utc)
 
     # Rule 1: Only run on configured day
@@ -93,10 +152,15 @@ def _should_generate_newsletter() -> tuple[bool, str]:
 
     # Rule 2: 1-hour grace period - can generate anytime within the hour after scheduled time
     if not (NEWSLETTER_HOUR <= now.hour < NEWSLETTER_HOUR + 1):
-        # Log missed window if we're past the grace period
-        if now.hour == NEWSLETTER_HOUR + 1:
+        # Log missed window ONCE if we're past the grace period
+        if now.hour >= NEWSLETTER_HOUR + 1 and not _missed_warning_shown:
             _log_utc("warning", f"⚠️ MISSED GENERATION WINDOW: Newsletter grace period ended at {NEWSLETTER_HOUR + 1:02d}:00 UTC, now {now.hour:02d}:00 UTC")
+            _missed_warning_shown = True
         return False, f"Not in grace period (current hour: {now.hour:02d}:00 UTC, grace period: {NEWSLETTER_HOUR:02d}:00-{NEWSLETTER_HOUR + 1:02d}:00 UTC)"
+
+    # Reset missed warning for next period
+    if NEWSLETTER_HOUR <= now.hour < NEWSLETTER_HOUR + 1:
+        _missed_warning_shown = False
 
     # Rule 3: Check last newsletter generation
     last_newsletter = _get_last_newsletter_date()
@@ -104,11 +168,11 @@ def _should_generate_newsletter() -> tuple[bool, str]:
     if last_newsletter is None:
         return True, "First newsletter generation (no previous newsletters found)"
 
-    # Rule 4: Ensure at least 6 days since last generation (prevent same-week duplicates)
+    # Rule 4: Ensure at least 5 days since last generation (prevent same-week duplicates)
     days_since_last = (now - last_newsletter).days
 
-    if days_since_last < 6:
-        return False, f"Too recent - last newsletter {days_since_last} days ago (need >= 6 days)"
+    if days_since_last < 5:
+        return False, f"Too recent - last newsletter {days_since_last} days ago (need >= 5 days)"
 
     # Rule 5: Check if already generated this week
     start_of_week = now - timedelta(days=now.weekday() + 1)  # Last Sunday
@@ -253,12 +317,11 @@ def _scheduler_worker():
             # Check if we're in active window: grace period + 30 minutes before for preparation
             is_active_window = False
             if NEWSLETTER_HOUR == 0:
-                # Special case for midnight: check from 23:30 previous day to 01:00 current day (grace period)
+                # Special case for midnight: check from 23:30 previous day to 00:59 current day (grace period)
                 prev_day = (NEWSLETTER_DAY - 1) % 7
                 is_active_window = (
                     (now.weekday() == prev_day and now.hour >= 23) or
-                    (now.weekday() == NEWSLETTER_DAY and now.hour <= 1) or
-                    ((now.weekday() + 1) % 7 == NEWSLETTER_DAY and now.hour <= 1)  # Handle Monday after Sunday midnight
+                    (now.weekday() == NEWSLETTER_DAY and now.hour == 0)  # Only hour 0 (00:00-00:59)
                 )
             else:
                 # Normal case: 30 minutes before to end of grace period
