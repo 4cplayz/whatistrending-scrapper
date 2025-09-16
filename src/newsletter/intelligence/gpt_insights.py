@@ -89,37 +89,45 @@ FUNK/PHONK CAR EDIT STYLE:
 ACTUAL SCRAPED VIDEO DATA:
 {summary}
 
-Based on this REAL performance data from funk/phonk car edits, create recommendations that understand this specific culture:
+Based on this REAL performance data from funk/phonk car edits, create detailed, actionable recommendations:
 
 Generate JSON with this structure:
 {{
   "new_creators": [
     {{
-      "recommendation": "Specific FUNK/PHONK car edit technique for 0-10K followers",
-      "statistical_backing": "Real performance data from scraped videos",
-      "expected_impact": "Predicted improvement for phonk car editors",
+      "recommendation": "Specific FUNK/PHONK technique with exact technical details (BPM timing, frame counts, effect intensity levels)",
+      "statistical_backing": "Real performance metrics: 'X technique averages Y views vs Z views without' or 'Top performers use X method'",
+      "expected_impact": "Specific improvement with numbers: 'X% increase in engagement' or 'Y more views on average'",
       "implementation": "Easy/Medium/Hard"
     }}
   ],
   "growing_creators": [
     {{
-      "recommendation": "Specific CAR CONTENT action for 10K-100K followers",
-      "statistical_backing": "Car video evidence supporting this",
-      "expected_impact": "Predicted improvement for car creators",
+      "recommendation": "Advanced FUNK/PHONK technique with technical specifics (exact timing, layering methods, transition techniques)",
+      "statistical_backing": "Performance comparison: 'Videos with X technique get Y% more engagement than baseline'",
+      "expected_impact": "Measurable growth: 'Average Z% increase in views' or 'X times more likely to go viral'",
       "implementation": "Easy/Medium/Hard"
     }}
   ],
   "established_creators": [
     {{
-      "recommendation": "Specific CAR CONTENT action for 100K+ followers",
-      "statistical_backing": "Car video evidence supporting this",
-      "expected_impact": "Predicted improvement for car creators",
+      "recommendation": "Expert-level PHONK editing technique with precise technical parameters (frame-perfect timing, advanced layering)",
+      "statistical_backing": "Data from top performers: 'Best creators use X method averaging Y views' or 'Z% of viral videos use this'",
+      "expected_impact": "Concrete results: 'Maintains X million average views' or 'Y% improvement in retention'",
       "implementation": "Easy/Medium/Hard"
     }}
   ]
 }}
 
-Limit to 2 FUNK/PHONK car edit recommendations per category. Focus on beat-sync techniques, Phonk music, aggressive transitions, and the underground car edit aesthetic - NOT generic TikTok advice."""
+Limit to 2 FUNK/PHONK car edit recommendations per category.
+
+IMPORTANT TECHNICAL REQUIREMENTS:
+- Include specific BPM ranges (most Phonk is 140-160 BPM)
+- Mention exact timing (4-frame cuts, 8-beat transitions, etc.)
+- Specify intensity levels (contrast +25, grain 15%, blur 3px, etc.)
+- Reference real performance differences from the data
+- NO generic advice like 'be consistent' or 'use trending sounds'
+- Focus on underground car edit aesthetic and Phonk culture"""
         
         # Force structured output with retries
         for attempt in range(3):  # 3 retry attempts
@@ -246,22 +254,29 @@ Generate JSON with this structure:
 {{
   "content_trend_predictions": [
     {{
-      "trend": "Specific CAR CONTENT trend prediction",
+      "trend": "Specific FUNK/PHONK editing trend with technical details (BPM changes, new effect combinations, timing innovations)",
       "confidence": "High/Medium/Low",
-      "timeline": "When it will peak",
-      "creator_action": "What car creators should do"
+      "timeline": "When it will peak (next 1-3 weeks)",
+      "creator_action": "Exact technical steps car editors should take with specific parameters"
     }}
   ],
   "creator_strategy_trends": [
     {{
-      "strategy": "Car creator approach that will gain momentum",
-      "evidence": "Current automotive data supporting this",
-      "success_probability": "Likelihood percentage"
+      "strategy": "Specific PHONK editing strategy with technical execution details",
+      "evidence": "Performance data showing X% improvement or Y view increase",
+      "success_probability": "Likelihood percentage with supporting metrics"
     }}
   ]
 }}
 
-Limit to 3 FUNK/PHONK car edit trends and 2 underground car edit strategies. Focus on Phonk music, beat-sync techniques, aggressive transitions, and the raw car edit aesthetic."""
+Limit to 3 FUNK/PHONK car edit trends and 2 underground car edit strategies.
+
+TECHNICAL REQUIREMENTS:
+- Include specific BPM timing and frame-perfect cutting techniques
+- Mention exact effect parameters and intensity levels
+- Reference performance improvements from actual data
+- Focus on Phonk music culture and underground car aesthetic
+- Provide actionable technical steps, not vague suggestions"""
         
         # Force structured output with retries
         for attempt in range(3):  # 3 retry attempts
