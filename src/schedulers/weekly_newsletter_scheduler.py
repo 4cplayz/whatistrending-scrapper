@@ -175,7 +175,9 @@ def _should_generate_newsletter() -> tuple[bool, str]:
         return False, f"Too recent - last newsletter {days_since_last} days ago (need >= 5 days)"
 
     # Rule 5: Check if already generated this week
-    start_of_week = now - timedelta(days=now.weekday() + 1)  # Last Sunday
+    # Calculate this week's Sunday (weekday 6 = Sunday, so we need days since last Sunday)
+    days_since_sunday = (now.weekday() + 1) % 7
+    start_of_week = now - timedelta(days=days_since_sunday)  # This week's Sunday
     if last_newsletter >= start_of_week:
         return False, f"Already generated this week (last: {last_newsletter.strftime('%Y-%m-%d')})"
 
