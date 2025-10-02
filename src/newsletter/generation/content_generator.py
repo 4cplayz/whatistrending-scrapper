@@ -32,9 +32,10 @@ def generate_database_newsletter_structure(df: pd.DataFrame,
     if len(df) < 1:
         raise ValueError("No video data available for newsletter generation")
     
-    # Extract week date range
-    week_start = df['created_at'].min().date() if 'created_at' in df.columns else datetime.now().date()
-    week_end = df['created_at'].max().date() if 'created_at' in df.columns else datetime.now().date()
+    # Extract week date range - use newsletter generation week, not video creation dates
+    # This ensures newsletter_id is unique per week and doesn't conflict with old data
+    week_end = datetime.now().date()
+    week_start = (datetime.now() - timedelta(days=7)).date()
     
     newsletter_structure = {
         'newsletter_main': _generate_newsletter_main_table_data(df, all_analysis_results, week_start, week_end),

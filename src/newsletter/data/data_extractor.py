@@ -25,9 +25,9 @@ def extract_past_7_days_videos() -> pd.DataFrame:
     """
     try:
         supabase = get_supabase_client()
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-        
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=2)
+
         logger.info(f"Extracting videos SCRAPED from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
         # Filter by scraped_at (when WE got the video) not created_at (when video was made on TikTok)
