@@ -26,7 +26,7 @@ def extract_past_7_days_videos() -> pd.DataFrame:
     try:
         supabase = get_supabase_client()
         end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=2)
+        start_date = end_date - timedelta(days=7)
 
         logger.info(f"Extracting videos SCRAPED from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         

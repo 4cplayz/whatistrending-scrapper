@@ -31,6 +31,9 @@ scheduler_thread = None
 scheduler_running = False
 last_successful_run = None
 
+# Pipeline lock to prevent concurrent runs
+_pipeline_running = False
+
 # Railway optimization: Cache last newsletter date to reduce DB calls
 _cached_last_newsletter = None
 _cache_timestamp = None
@@ -187,11 +190,11 @@ def _should_generate_newsletter() -> tuple[bool, str]:
 def get_scheduler_status() -> Dict[str, Any]:
     """
     Get comprehensive scheduler status with production diagnostics.
-    
+
     Returns:
         Dict[str, Any]: Detailed scheduler status
     """
-    global scheduler_running, scheduler_thread, last_successful_run
+    global scheduler_running, scheduler_thread, last_successful_run, _pipeline_running
     
     now = datetime.now(timezone.utc)
     should_generate, reason = _should_generate_newsletter()
@@ -206,6 +209,7 @@ def get_scheduler_status() -> Dict[str, Any]:
     return {
         "scheduler_status": "running" if scheduler_running else "stopped",
         "thread_alive": scheduler_thread.is_alive() if scheduler_thread else False,
+        "pipeline_running": _pipeline_running,
         "current_time": now.isoformat(),
         "is_sunday": now.weekday() == 6,
         "current_hour": now.hour,
@@ -269,10 +273,19 @@ def force_run_newsletter() -> bool:
 def _scheduled_newsletter_job():
     """
     PRODUCTION VERSION - Full safety checks enabled.
+    Pipeline lock prevents concurrent runs.
     """
-    global last_successful_run
-    
+    global last_successful_run, _pipeline_running
+
+    # LOCK: Check if pipeline is already running
+    if _pipeline_running:
+        _log_utc("warning", "⚠️ Pipeline already running - skipping duplicate trigger")
+        return
+
     try:
+        # LOCK: Set pipeline running flag
+        _pipeline_running = True
+
         _log_utc("info", "📅 Sunday midnight scheduler triggered")
 
         # Production safety: Check if we should actually generate
@@ -281,10 +294,10 @@ def _scheduled_newsletter_job():
         if not should_generate:
             _log_utc("info", f"🚫 Newsletter generation skipped: {reason}")
             return
-        
+
         _log_utc("info", f"✅ Safety check passed: {reason}")
         _log_utc("info", "🚀 Starting scheduled complete pipeline (ingestion + newsletter)...")
-        
+
         from src.schedulers.main_pipeline import run_complete_weekly_pipeline
         from src.utils.error_logger import log_newsletter_failure
 
@@ -292,6 +305,14 @@ def _scheduled_newsletter_job():
 
         if success:
             last_successful_run = datetime.now(timezone.utc)
+
+            # CRITICAL: Clear cache after successful newsletter creation
+            # This ensures next check will fetch fresh data from database
+            global _cached_last_newsletter, _cache_timestamp
+            _cached_last_newsletter = None
+            _cache_timestamp = None
+            _log_utc("info", "🗑️ Cache cleared - next check will fetch fresh data")
+
             logger.info("✅ Scheduled newsletter generation completed successfully")
         else:
             logger.error("❌ Scheduled newsletter generation failed")
@@ -303,6 +324,11 @@ def _scheduled_newsletter_job():
     except Exception as e:
         logger.error(f"❌ Scheduled newsletter job failed: {e}")
         log_newsletter_failure("scheduler_exception", f"Unexpected error in scheduled job: {str(e)}")
+
+    finally:
+        # LOCK: Always release the lock, even if pipeline fails
+        _pipeline_running = False
+        _log_utc("info", "🔓 Pipeline lock released")
 
 
 def _scheduler_worker():
